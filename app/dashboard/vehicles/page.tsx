@@ -2,7 +2,6 @@
 
 import { useStore } from "@/store/useStore";
 import { VehicleDialog } from "@/components/vehicles/VehicleDialog";
-import { VehicleLogDialog } from "@/components/vehicles/VehicleLogDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     Table,
@@ -87,10 +86,6 @@ export default function VehiclesPage() {
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
-                                                <VehicleLogDialog
-                                                    vehicleId={vehicle.id}
-                                                    vehiclePlate={vehicle.plateNumber}
-                                                />
                                                 <VehicleDialog
                                                     vehicle={vehicle}
                                                     trigger={

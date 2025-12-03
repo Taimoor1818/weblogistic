@@ -92,7 +92,7 @@ export default function DashboardPage() {
                 <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push('/dashboard/trips')}>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Shipments</CardTitle>
-                        <Truck className="h-4 w-4 text-muted-foreground" />
+                        <Truck className="h-4 w-4 text-blue-500" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{trips.filter(t => t.status === 'delivered').length}</div>
@@ -103,7 +103,7 @@ export default function DashboardPage() {
                 <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push('/dashboard/drivers')}>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Active Drivers</CardTitle>
-                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <Users className="h-4 w-4 text-green-500" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{drivers.filter((d: any) => d.status === 'available').length}</div>
@@ -114,7 +114,7 @@ export default function DashboardPage() {
                 <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push('/dashboard/payments')}>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Issue Payments</CardTitle>
-                        <CreditCard className="h-4 w-4 text-muted-foreground" />
+                        <CreditCard className="h-4 w-4 text-red-500" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{payments.filter((p: any) => p.status === 'pending').length}</div>
@@ -125,7 +125,7 @@ export default function DashboardPage() {
                 <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push('/dashboard/vehicles')}>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Active Vehicles</CardTitle>
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <MapPin className="h-4 w-4 text-purple-500" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{vehicles.filter((v: any) => v.status === 'available').length}</div>

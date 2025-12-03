@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useStore } from "@/store/useStore";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,13 +16,18 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
   DollarSign, 
   Truck, 
   User, 
   Calendar,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  Edit,
+  Trash2,
+  CreditCard,
+  Fuel
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "react-hot-toast";
@@ -38,7 +43,19 @@ interface Payment {
 }
 
 export default function PaymentsPage() {
-  const { trips, drivers, vehicles, payments, addPayment, updatePayment } = useStore();
+  const { trips, drivers, vehicles, payments, addPayment, updatePayment, deletePayment, profile } = useStore();
+  const [editingPayment, setEditingPayment] = useState<any>(null);
+  const [deletePaymentId, setDeletePaymentId] = useState<string | null>(null);
+  const [mpin, setMpin] = useState('');
+  const [showMpinDialog, setShowMpinDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [mpinAction, setMpinAction] = useState<'edit' | 'delete' | null>(null);
+  const [editForm, setEditForm] = useState({
+    type: 'other' as 'trip' | 'salary' | 'expense' | 'fuel' | 'other',
+    amount: '',
+    description: '',
+    date: ''
+  });
   const [newPayment, setNewPayment] = useState({
     type: 'other' as 'trip' | 'salary' | 'expense' | 'other',
     amount: '',
@@ -53,9 +70,9 @@ export default function PaymentsPage() {
     .reduce((sum: number, payment: any) => sum + payment.amount, 0);
     
   // Total Expenses = Salary + Expense payments that are paid
-  // Total Expenses = Salary + Expense + Fuel payments that are paid
+  // Total Expenses = All payment types except trip that are paid
   const totalExpenses = payments
-    .filter((p: any) => (p.type === 'salary' || p.type === 'expense' || p.type === 'fuel') && p.status === 'paid')
+    .filter((p: any) => p.type !== 'trip' && p.status === 'paid')
     .reduce((sum: number, payment: any) => sum + payment.amount, 0);
     
   // Issue Payments = Trip payments that are pending (to be issued)
@@ -63,8 +80,8 @@ export default function PaymentsPage() {
     .filter((p: any) => p.type === 'trip' && p.status === 'pending')
     .reduce((sum: number, payment: any) => sum + payment.amount, 0);
     
-  // Net Profit = Total Revenue - (Issue Payments + Total Expenses)
-  const netProfit = totalRevenue - (issuePayments + totalExpenses);
+  // Net Profit = Total Revenue - Total Expenses
+  const netProfit = totalRevenue - totalExpenses;
   
   const pendingPayments = payments.filter((p: any) => p.status === 'pending').length;
   
@@ -108,6 +125,73 @@ export default function PaymentsPage() {
     }
   };
 
+  const handleIssuePayment = async (paymentId: string) => {
+    const paymentToUpdate = payments.find((p: any) => p.id === paymentId);
+    if (paymentToUpdate) {
+      await updatePayment({
+        ...paymentToUpdate,
+        status: 'paid'
+      });
+      toast.success("Payment marked as issued");
+    }
+  };
+
+  const verifyMpin = (enteredMpin: string) => {
+    // Simple hash comparison (in a real app, you'd use a proper hashing library)
+    const enteredHash = btoa(enteredMpin);
+    return profile?.mpinHash === enteredHash;
+  };
+
+  const handleEditClick = (payment: any) => {
+    setEditingPayment(payment);
+    setEditForm({
+      type: payment.type,
+      amount: payment.amount.toString(),
+      description: payment.description,
+      date: payment.date
+    });
+    setMpinAction('edit');
+    setShowMpinDialog(true);
+  };
+
+  const handleDeleteClick = (paymentId: string) => {
+    setDeletePaymentId(paymentId);
+    setMpinAction('delete');
+    setShowMpinDialog(true);
+  };
+
+  const handleMpinSubmit = async () => {
+    if (verifyMpin(mpin)) {
+      if (mpinAction === 'edit' && editingPayment) {
+        setShowMpinDialog(false);
+        // Show edit dialog
+        setShowEditDialog(true);
+      } else if (mpinAction === 'delete' && deletePaymentId) {
+        await deletePayment(deletePaymentId);
+        setShowMpinDialog(false);
+        setDeletePaymentId(null);
+        toast.success("Payment deleted successfully");
+      }
+      setMpin('');
+    } else {
+      toast.error("Invalid MPIN. Please try again.");
+    }
+  };
+
+  const handleEditSubmit = async () => {
+    if (editingPayment) {
+      await updatePayment({
+        ...editingPayment,
+        type: editForm.type,
+        amount: parseFloat(editForm.amount),
+        description: editForm.description,
+        date: editForm.date
+      });
+      setShowEditDialog(false);
+      toast.success("Payment updated successfully");
+    }
+  };
+
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'trip': return 'bg-blue-100 text-blue-800';
@@ -141,7 +225,7 @@ export default function PaymentsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <TrendingUp className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${totalRevenue.toFixed(2)}</div>
@@ -152,7 +236,7 @@ export default function PaymentsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-            <TrendingDown className="h-4 w-4 text-muted-foreground" />
+            <TrendingDown className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${totalExpenses.toFixed(2)}</div>
@@ -163,7 +247,7 @@ export default function PaymentsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Net Profit</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -176,7 +260,7 @@ export default function PaymentsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Issue Payments</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Calendar className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{issuePayments.toFixed(2)}</div>
@@ -225,16 +309,44 @@ export default function PaymentsPage() {
                           <Badge className={getStatusColor(payment.status)}>
                             {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
                           </Badge>
-                          {payment.type === 'trip' && payment.status === 'pending' && (
+                          <div className="flex items-center gap-2">
+                            {payment.status === 'pending' && (
+                              <div className="flex gap-1">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={() => handleReceivePayment(payment.id)}
+                                  className="h-6 px-2 text-xs"
+                                >
+                                  Receive
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={() => handleIssuePayment(payment.id)}
+                                  className="h-6 px-2 text-xs"
+                                >
+                                  Issue
+                                </Button>
+                              </div>
+                            )}
                             <Button 
                               size="sm" 
-                              variant="outline" 
-                              onClick={() => handleReceivePayment(payment.id)}
+                              variant="ghost" 
+                              onClick={() => handleEditClick(payment)}
                               className="h-6 px-2 text-xs"
                             >
-                              Receive
+                              <Edit className="h-3 w-3" />
                             </Button>
-                          )}
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              onClick={() => handleDeleteClick(payment.id)}
+                              className="h-6 px-2 text-xs text-destructive"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -318,7 +430,10 @@ export default function PaymentsPage() {
                 <div className="space-y-4">
                   <div>
                     <div className="flex justify-between mb-1">
-                      <span className="text-sm font-medium">Trip Payments</span>
+                      <span className="text-sm font-medium flex items-center gap-2">
+                        <DollarSign className="h-4 w-4 text-green-500" />
+                        Trip Payments
+                      </span>
                       <span className="text-sm text-muted-foreground">${totalRevenue.toFixed(2)}</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
@@ -329,18 +444,7 @@ export default function PaymentsPage() {
                     </div>
                   </div>
                   
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <span className="text-sm font-medium">Other Income</span>
-                      <span className="text-sm text-muted-foreground">$0.00</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-green-600 h-2 rounded-full" 
-                        style={{ width: '0%' }}
-                      ></div>
-                    </div>
-                  </div>
+
                 </div>
               </CardContent>
             </Card>
@@ -353,7 +457,10 @@ export default function PaymentsPage() {
                 <div className="space-y-4">
                   <div>
                     <div className="flex justify-between mb-1">
-                      <span className="text-sm font-medium">Driver Salaries</span>
+                      <span className="text-sm font-medium flex items-center gap-2">
+                        <User className="h-4 w-4 text-blue-500" />
+                        Driver Salaries
+                      </span>
                       <span className="text-sm text-muted-foreground">
                         ${payments.filter((p: any) => p.type === 'salary' && p.status === 'paid').reduce((sum: number, p: any) => sum + p.amount, 0).toFixed(2)}
                       </span>
@@ -371,9 +478,12 @@ export default function PaymentsPage() {
                   
                   <div>
                     <div className="flex justify-between mb-1">
-                      <span className="text-sm font-medium">Other Expenses</span>
+                      <span className="text-sm font-medium flex items-center gap-2">
+                        <CreditCard className="h-4 w-4 text-orange-500" />
+                        Other Expenses
+                      </span>
                       <span className="text-sm text-muted-foreground">
-                        ${payments.filter((p: any) => p.type === 'expense' && p.status === 'paid').reduce((sum: number, p: any) => sum + p.amount, 0).toFixed(2)}
+                        ${(payments.filter((p: any) => p.type === 'expense' && p.status === 'paid').reduce((sum: number, p: any) => sum + p.amount, 0) + payments.filter((p: any) => p.type === 'other' && p.status === 'paid').reduce((sum: number, p: any) => sum + p.amount, 0)).toFixed(2)}
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
@@ -381,7 +491,7 @@ export default function PaymentsPage() {
                         className="bg-orange-600 h-2 rounded-full" 
                         style={{ 
                           width: `${totalExpenses > 0 ? 
-                            (payments.filter((p: any) => p.type === 'expense' && p.status === 'paid').reduce((sum: number, p: any) => sum + p.amount, 0) / totalExpenses * 100) : 0}%` 
+                            ((payments.filter((p: any) => p.type === 'expense' && p.status === 'paid').reduce((sum: number, p: any) => sum + p.amount, 0) + payments.filter((p: any) => p.type === 'other' && p.status === 'paid').reduce((sum: number, p: any) => sum + p.amount, 0)) / totalExpenses * 100) : 0}%` 
                         }}
                       ></div>
                     </div>
@@ -389,7 +499,10 @@ export default function PaymentsPage() {
                   
                   <div>
                     <div className="flex justify-between mb-1">
-                      <span className="text-sm font-medium">Fuel Expenses</span>
+                      <span className="text-sm font-medium flex items-center gap-2">
+                        <Fuel className="h-4 w-4 text-yellow-500" />
+                        Fuel Expenses
+                      </span>
                       <span className="text-sm text-muted-foreground">
                         ${payments.filter((p: any) => p.type === 'fuel' && p.status === 'paid').reduce((sum: number, p: any) => sum + p.amount, 0).toFixed(2)}
                       </span>
@@ -404,12 +517,117 @@ export default function PaymentsPage() {
                       ></div>
                     </div>
                   </div>
+                  
+
                 </div>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
       </Tabs>
+      
+      {/* MPIN Verification Dialog */}
+      <Dialog open={showMpinDialog} onOpenChange={setShowMpinDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Enter MPIN to Continue</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="mpin">MPIN</Label>
+              <Input
+                id="mpin"
+                type="password"
+                placeholder="Enter your 4-digit MPIN"
+                value={mpin}
+                onChange={(e) => setMpin(e.target.value)}
+                maxLength={4}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => {
+                setShowMpinDialog(false);
+                setMpin('');
+                setMpinAction(null);
+                setDeletePaymentId(null);
+              }}>
+                Cancel
+              </Button>
+              <Button onClick={handleMpinSubmit}>
+                Confirm
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Edit Payment Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Payment</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-type">Payment Type</Label>
+                <select
+                  id="edit-type"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={editForm.type}
+                  onChange={(e) => setEditForm({...editForm, type: e.target.value as any})}
+                >
+                  <option value="trip">Trip Payment</option>
+                  <option value="salary">Driver Salary</option>
+                  <option value="expense">Expense</option>
+                  <option value="fuel">Fuel Usage</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-amount">Amount ($)</Label>
+                <Input
+                  id="edit-amount"
+                  type="number"
+                  placeholder="0.00"
+                  value={editForm.amount}
+                  onChange={(e) => setEditForm({...editForm, amount: e.target.value})}
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Input
+                id="edit-description"
+                placeholder="Enter payment description"
+                value={editForm.description}
+                onChange={(e) => setEditForm({...editForm, description: e.target.value})}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="edit-date">Date</Label>
+              <Input
+                id="edit-date"
+                type="date"
+                value={editForm.date}
+                onChange={(e) => setEditForm({...editForm, date: e.target.value})}
+              />
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleEditSubmit}>
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
