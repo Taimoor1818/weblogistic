@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { AppData, Driver, Vehicle, Customer, Trip, UserProfile, TeamMember } from '@/types';
+import { AppData, Driver, Vehicle, Customer, Trip, UserProfile, TeamMember, Payment } from '@/types';
 import { db } from '@/lib/firebase';
 import { doc, updateDoc, onSnapshot, collection, addDoc, deleteDoc, query, Unsubscribe } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
@@ -29,6 +29,10 @@ interface StoreState extends AppData {
     addTrip: (trip: Omit<Trip, 'id'>) => Promise<void>;
     updateTrip: (trip: Trip) => Promise<void>;
     deleteTrip: (tripId: string) => Promise<void>;
+    
+    addPayment: (payment: Omit<Payment, 'id'>) => Promise<void>;
+    updatePayment: (payment: Payment) => Promise<void>;
+    deletePayment: (paymentId: string) => Promise<void>;
 }
 
 const initialState: AppData = {
@@ -38,6 +42,7 @@ const initialState: AppData = {
     vehicles: [],
     customers: [],
     trips: [],
+    payments: [],
     settings: {
         currency: 'USD',
         notificationsEnabled: true,
@@ -121,6 +126,14 @@ export const useStore = create<StoreState>((set, get) => ({
                 set({ trips });
             });
             unsubscribers.push(tripsUnsub);
+            
+            // Fetch payments from user's payments subcollection
+            const paymentsQuery = query(collection(db, 'users', uid, 'payments'));
+            const paymentsUnsub = onSnapshot(paymentsQuery, (snapshot) => {
+                const payments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment));
+                set({ payments });
+            });
+            unsubscribers.push(paymentsUnsub);
 
             set({ unsubscribers, isLoading: false, initialized: true });
 
@@ -324,6 +337,55 @@ export const useStore = create<StoreState>((set, get) => ({
         } catch (error) {
             console.error(error);
             toast.error('Failed to delete trip');
+        }
+    },
+    
+    addPayment: async (payment) => {
+        const { profile } = get();
+        if (!profile) {
+            toast.error('User not authenticated');
+            return;
+        }
+        
+        try {
+            await addDoc(collection(db, 'users', profile.uid, 'payments'), payment);
+            toast.success('Payment added');
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to add payment');
+        }
+    },
+
+    updatePayment: async (payment) => {
+        const { profile } = get();
+        if (!profile) {
+            toast.error('User not authenticated');
+            return;
+        }
+        
+        try {
+            const { id, ...data } = payment;
+            await updateDoc(doc(db, 'users', profile.uid, 'payments', id), data);
+            toast.success('Payment updated');
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to update payment');
+        }
+    },
+
+    deletePayment: async (paymentId) => {
+        const { profile } = get();
+        if (!profile) {
+            toast.error('User not authenticated');
+            return;
+        }
+        
+        try {
+            await deleteDoc(doc(db, 'users', profile.uid, 'payments', paymentId));
+            toast.success('Payment deleted');
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to delete payment');
         }
     },
 }));

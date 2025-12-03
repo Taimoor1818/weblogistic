@@ -81,8 +81,13 @@ export function Sidebar() {
             icon: Settings,
         },
         {
-            title: "Subscription",
+            title: "Subscription Payment",
             href: "/dashboard/payment",
+            icon: CreditCard,
+        },
+        {
+            title: "Payment Management",
+            href: "/dashboard/payments",
             icon: CreditCard,
         },
         {

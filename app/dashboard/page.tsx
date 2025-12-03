@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useStore } from "@/store/useStore";
 import { onAuthStateChanged } from "firebase/auth";
@@ -17,14 +17,9 @@ import Link from "next/link";
 
 export default function DashboardPage() {
     const router = useRouter();
-    const { profile, setProfile } = useStore();
+    const { profile, setProfile, trips, drivers, vehicles, payments } = useStore();
     const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState({
-        totalShipments: 0,
-        activeDrivers: 0,
-        pendingPayments: 0,
-        activeVehicles: 0,
-    });
+    // Stats are now calculated directly from the store data using useMemo
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -52,12 +47,11 @@ export default function DashboardPage() {
 
                         // Redirect if payment is needed
                         if (status === "pending_payment" || status === "expired") {
-                            router.push("/dashboard/payment");
+                            router.push("/dashboard/payments");
                             return;
                         }
 
-                        // Fetch dashboard stats
-                        fetchDashboardStats(firebaseUser.uid);
+                        // Stats are now calculated directly from the store data
                     } else {
                         router.push("/login");
                     }
@@ -75,21 +69,7 @@ export default function DashboardPage() {
         return () => unsubscribe();
     }, [router, setProfile]);
 
-    const fetchDashboardStats = async (uid: string) => {
-        try {
-            // In a real app, you would fetch actual stats from your database
-            // For now, we'll use dummy data
-            setStats({
-                totalShipments: 124,
-                activeDrivers: 8,
-                pendingPayments: 3,
-                activeVehicles: 12,
-            });
-        } catch (error) {
-            console.error("Error fetching dashboard stats:", error);
-            toast.error("Failed to load dashboard statistics");
-        }
-    };
+    // Stats are now calculated directly from the store data using useMemo
 
     if (loading) {
         return (
@@ -109,47 +89,47 @@ export default function DashboardPage() {
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
-                <Card>
+                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push('/dashboard/trips')}>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Shipments</CardTitle>
                         <Truck className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.totalShipments}</div>
-                        <p className="text-xs text-muted-foreground">+12% from last month</p>
+                        <div className="text-2xl font-bold">{trips.filter(t => t.status === 'delivered').length}</div>
+                        <p className="text-xs text-muted-foreground">Delivered shipments</p>
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push('/dashboard/drivers')}>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Active Drivers</CardTitle>
                         <Users className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.activeDrivers}</div>
-                        <p className="text-xs text-muted-foreground">+2 from last week</p>
+                        <div className="text-2xl font-bold">{drivers.filter((d: any) => d.status === 'available').length}</div>
+                        <p className="text-xs text-muted-foreground">Available drivers</p>
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push('/dashboard/payments')}>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Pending Payments</CardTitle>
                         <CreditCard className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.pendingPayments}</div>
-                        <p className="text-xs text-muted-foreground">Requires attention</p>
+                        <div className="text-2xl font-bold">{payments.filter((p: any) => p.status === 'pending').length}</div>
+                        <p className="text-xs text-muted-foreground">Manage payments</p>
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push('/dashboard/vehicles')}>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Active Vehicles</CardTitle>
                         <MapPin className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.activeVehicles}</div>
-                        <p className="text-xs text-muted-foreground">All systems operational</p>
+                        <div className="text-2xl font-bold">{vehicles.filter((v: any) => v.status === 'available').length}</div>
+                        <p className="text-xs text-muted-foreground">Operational</p>
                     </CardContent>
                 </Card>
             </div>

@@ -47,6 +47,16 @@ export interface Trip {
     createdAt: string;
 }
 
+export interface Payment {
+    id: string;
+    type: 'trip' | 'salary' | 'expense' | 'other';
+    amount: number;
+    description: string;
+    date: string;
+    status: 'paid' | 'pending' | 'overdue';
+    relatedId?: string; // Trip ID, Driver ID, etc.
+}
+
 export interface UserProfile {
     uid: string;
     name: string;
@@ -75,6 +85,7 @@ export interface AppData {
     vehicles: Vehicle[];
     customers: Customer[];
     trips: Trip[];
+    payments: Payment[];
     settings: {
         currency: string;
         notificationsEnabled: boolean;

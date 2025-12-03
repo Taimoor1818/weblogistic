@@ -66,6 +66,11 @@ service cloud.firestore {
     match /users/{userId}/maintenance_logs/{logId} {
       allow read, create, update, delete: if isAuthenticated() && isOwner(userId);
     }
+    
+    // Payments - stored as subcollection of users
+    match /users/{userId}/payments/{paymentId} {
+      allow read, create, update, delete: if isAuthenticated() && isOwner(userId);
+    }
 
   }
 
