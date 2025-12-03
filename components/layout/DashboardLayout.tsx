@@ -1,0 +1,81 @@
+"use client";
+
+import { Sidebar } from "./Sidebar";
+import { Header } from "./Header";
+import { useStore } from "@/store/useStore";
+import { useEffect } from "react";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged, getRedirectResult } from "firebase/auth";
+import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
+import { useAuth } from "@/hooks/useAuth";
+
+export function DashboardLayout({ children }: { children: React.ReactNode }) {
+    const { isLoading, initialized } = useStore();
+    const { loading: authLoading, isAuthenticated } = useAuth();
+    const router = useRouter();
+
+    useEffect(() => {
+        // Handle redirect results
+        const handleRedirectResult = async () => {
+            try {
+                const result = await getRedirectResult(auth);
+                if (result) {
+                    toast.success("Welcome back!");
+                    // Redirect to dashboard after successful login
+                    router.push("/dashboard");
+                }
+            } catch (error) {
+                console.error("Redirect sign-in error:", error);
+                toast.error("Authentication failed. Please try again.");
+            }
+        };
+
+        handleRedirectResult();
+
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                router.push("/login");
+            }
+        });
+
+        return () => unsubscribe();
+    }, [router]);
+
+    // Handle authentication redirect in useEffect to avoid React warnings
+    useEffect(() => {
+        if (!authLoading && !isAuthenticated) {
+            router.push("/login");
+        }
+    }, [authLoading, isAuthenticated, router]);
+
+    // Show loading spinner while authenticating or initializing store
+    if (authLoading || (!isAuthenticated && !authLoading) || (isAuthenticated && isLoading && !initialized)) {
+        return (
+            <div className="flex h-screen items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading dashboard...</p>
+                    <div className="mt-2 text-xs text-muted-foreground">
+                        {authLoading && <span>Authenticating...</span>}
+                        {!authLoading && isAuthenticated && isLoading && !initialized && <span>Initializing data...</span>}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex h-screen overflow-hidden bg-background">
+            <div className="hidden lg:block">
+                <Sidebar />
+            </div>
+            <div className="flex flex-1 flex-col overflow-hidden">
+                <Header />
+                <main className="flex-1 overflow-y-auto p-4 lg:p-8">
+                    {children}
+                </main>
+            </div>
+        </div>
+    );
+}
