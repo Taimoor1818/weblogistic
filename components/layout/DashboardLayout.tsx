@@ -9,10 +9,11 @@ import { onAuthStateChanged, getRedirectResult } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
     const { isLoading, initialized } = useStore();
-    const { loading: authLoading, isAuthenticated } = useAuth();
+    const { loading: authLoading, isAuthenticated, user } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
@@ -72,6 +73,20 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             </div>
             <div className="flex flex-1 flex-col overflow-hidden">
                 <Header />
+                {/* Desktop Header */}
+                <div className="hidden lg:flex h-16 items-center justify-between border-b bg-background px-6">
+                    <div className="flex items-center gap-2">
+                        <h1 className="text-xl font-bold">WebLogistic</h1>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <div className="flex flex-col items-end">
+                            <p className="text-sm font-medium truncate max-w-[200px]">{user?.email || "user@example.com"}</p>
+                            {user?.subscriptionStatus && (
+                                <StatusBadge status={user.subscriptionStatus} showDot={false} className="scale-75 origin-right" />
+                            )}
+                        </div>
+                    </div>
+                </div>
                 <main className="flex-1 overflow-y-auto p-4 lg:p-8">
                     {children}
                 </main>
