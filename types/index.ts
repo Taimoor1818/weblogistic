@@ -58,9 +58,19 @@ export interface UserProfile {
     role?: string;
 }
 
+export interface TeamMember {
+    id: string;
+    ownerId: string;
+    memberEmail: string;
+    memberMobile?: string;
+    addedAt: string;
+    status: "pending" | "active";
+}
+
 export interface AppData {
     profile: UserProfile | null;
     drivers: Driver[];
+    teamMembers: TeamMember[];
     vehicles: Vehicle[];
     customers: Customer[];
     trips: Trip[];

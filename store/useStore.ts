@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { AppData, Driver, Vehicle, Customer, Trip, UserProfile } from '@/types';
+import { AppData, Driver, Vehicle, Customer, Trip, UserProfile, TeamMember } from '@/types';
 import { db } from '@/lib/firebase';
 import { doc, updateDoc, onSnapshot, collection, addDoc, deleteDoc, query, Unsubscribe } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
@@ -33,6 +33,7 @@ interface StoreState extends AppData {
 const initialState: AppData = {
     profile: null,
     drivers: [],
+    teamMembers: [],
     vehicles: [],
     customers: [],
     trips: [],
@@ -78,23 +79,31 @@ export const useStore = create<StoreState>((set, get) => ({
             });
             unsubscribers.push(userUnsub);
 
-            // 2. Subscribe to Collections
-            const collections = [
-                { name: 'drivers', setter: 'drivers' },
+            // 2. Subscribe to User Subcollections
+            // Fetch drivers from user's drivers subcollection
+            const driversQuery = query(collection(db, 'users', uid, 'drivers'));
+            const driversUnsub = onSnapshot(driversQuery, (snapshot) => {
+                const drivers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Driver));
+                set({ drivers });
+            });
+            unsubscribers.push(driversUnsub);
+
+            // Fetch team members from user's teamMembers subcollection
+            const teamMembersQuery = query(collection(db, 'users', uid, 'teamMembers'));
+            const teamMembersUnsub = onSnapshot(teamMembersQuery, (snapshot) => {
+                const teamMembers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamMember));
+                set({ teamMembers });
+            });
+            unsubscribers.push(teamMembersUnsub);
+
+            // 3. Subscribe to Shared Collections (vehicles, customers, trips)
+            const sharedCollections = [
                 { name: 'vehicles', setter: 'vehicles' },
                 { name: 'customers', setter: 'customers' },
                 { name: 'trips', setter: 'trips' }
             ];
 
-            collections.forEach(({ name, setter }) => {
-                // Assuming we might want to filter by ownerId in the future, but for now getting all
-                // In a real SaaS, we MUST filter by ownerId/userId.
-                // Adding basic security filter here assuming documents have ownerId or similar
-                // But wait, the current types don't enforce ownerId on everything.
-                // For now, we'll fetch all, but we SHOULD add ownerId to everything.
-
-                // Let's assume the security rules handle the "read" permission (which they do),
-                // so we can just query the collection.
+            sharedCollections.forEach(({ name, setter }) => {
                 const q = query(collection(db, name));
                 const unsub = onSnapshot(q, (snapshot) => {
                     const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -113,8 +122,14 @@ export const useStore = create<StoreState>((set, get) => ({
     },
 
     addDriver: async (driver) => {
+        const { profile } = get();
+        if (!profile) {
+            toast.error('User not authenticated');
+            return;
+        }
+        
         try {
-            await addDoc(collection(db, 'drivers'), driver);
+            await addDoc(collection(db, 'users', profile.uid, 'drivers'), driver);
             toast.success('Driver added');
         } catch (error) {
             console.error(error);
@@ -123,9 +138,15 @@ export const useStore = create<StoreState>((set, get) => ({
     },
 
     updateDriver: async (driver) => {
+        const { profile } = get();
+        if (!profile) {
+            toast.error('User not authenticated');
+            return;
+        }
+        
         try {
             const { id, ...data } = driver;
-            await updateDoc(doc(db, 'drivers', id), data);
+            await updateDoc(doc(db, 'users', profile.uid, 'drivers', id), data);
             toast.success('Driver updated');
         } catch (error) {
             console.error(error);
@@ -134,8 +155,14 @@ export const useStore = create<StoreState>((set, get) => ({
     },
 
     deleteDriver: async (driverId) => {
+        const { profile } = get();
+        if (!profile) {
+            toast.error('User not authenticated');
+            return;
+        }
+        
         try {
-            await deleteDoc(doc(db, 'drivers', driverId));
+            await deleteDoc(doc(db, 'users', profile.uid, 'drivers', driverId));
             toast.success('Driver deleted');
         } catch (error) {
             console.error(error);

@@ -28,7 +28,7 @@ export default function TeamPage() {
     const fetchTeamMembers = useCallback(async () => {
         if (!user) return;
         try {
-            const q = query(collection(db, "teamMembers"), where("ownerId", "==", user.uid));
+            const q = query(collection(db, "users", user.uid, "teamMembers"));
             const querySnapshot = await getDocs(q);
             const teamData = querySnapshot.docs.map(doc => ({
                 id: doc.id,
@@ -88,7 +88,7 @@ export default function TeamPage() {
                 return;
             }
 
-            await addDoc(collection(db, "teamMembers"), {
+            await addDoc(collection(db, "users", user.uid, "teamMembers"), {
                 ownerId: user.uid,
                 memberEmail: newMemberEmail,
                 memberMobile: newMemberMobile,
@@ -110,10 +110,10 @@ export default function TeamPage() {
     };
 
     const executeDeleteMember = async () => {
-        if (!memberToDelete) return;
+        if (!memberToDelete || !user) return;
         setLoading(true);
         try {
-            await deleteDoc(doc(db, "teamMembers", memberToDelete));
+            await deleteDoc(doc(db, "users", user.uid, "teamMembers", memberToDelete));
             toast.success("Team member removed");
             setMemberToDelete(null);
             fetchTeamMembers();
