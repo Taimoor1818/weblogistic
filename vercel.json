@@ -3,11 +3,8 @@
   "public": false,
   "builds": [
     {
-      "src": "vercel-build.sh",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": ".next"
-      }
+      "src": "package.json",
+      "use": "@vercel/next"
     }
   ]
 }
