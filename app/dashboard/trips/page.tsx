@@ -137,7 +137,7 @@ export default function TripsPage() {
                                                             : "outline"
                                                 }
                                                 className={
-                                                    trip.status === "delivered" ? "bg-green-500 hover:bg-green-600" :
+                                                    trip.status === "delivered" || trip.status === "returned" ? "bg-green-500 hover:bg-green-600" :
                                                         trip.status === "in-transit" ? "bg-blue-500 hover:bg-blue-600" : ""
                                                 }
                                             >

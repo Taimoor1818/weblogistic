@@ -63,6 +63,13 @@ export function TripDialog({ trip, trigger, open: controlledOpen, onOpenChange: 
                         updateDriver({ ...driver, status: 'busy' });
                     }
                 }
+                // Update driver status to available if trip is delivered or returned
+                else if ((data.status === 'delivered' || data.status === 'returned') && data.driverId) {
+                    const driver = drivers.find(d => d.id === data.driverId);
+                    if (driver && driver.status !== 'available') {
+                        updateDriver({ ...driver, status: 'available' });
+                    }
+                }
             } else {
                 // Create new trip
                 await addTrip({
@@ -195,13 +202,18 @@ export function TripDialog({ trip, trigger, open: controlledOpen, onOpenChange: 
                             <Label htmlFor="status">Status</Label>
                             <Select
                                 onValueChange={(value) => {
-                                    setValue("status", value as 'planned' | 'assigned' | 'picked-up' | 'in-transit' | 'delivered');
+                                    setValue("status", value as 'planned' | 'assigned' | 'picked-up' | 'in-transit' | 'delivered' | 'returned');
                                     
                                     // Update driver status when trip status changes
                                     if (value === 'assigned' && watchDriverId) {
                                         const driver = drivers.find(d => d.id === watchDriverId);
                                         if (driver && driver.status !== 'busy') {
                                             updateDriver({ ...driver, status: 'busy' });
+                                        }
+                                    } else if ((value === 'delivered' || value === 'returned') && watchDriverId) {
+                                        const driver = drivers.find(d => d.id === watchDriverId);
+                                        if (driver && driver.status !== 'available') {
+                                            updateDriver({ ...driver, status: 'available' });
                                         }
                                     }
                                 }}
@@ -216,6 +228,7 @@ export function TripDialog({ trip, trigger, open: controlledOpen, onOpenChange: 
                                     <SelectItem value="picked-up">Picked Up</SelectItem>
                                     <SelectItem value="in-transit">In Transit</SelectItem>
                                     <SelectItem value="delivered">Delivered</SelectItem>
+                                    <SelectItem value="returned">Returned</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

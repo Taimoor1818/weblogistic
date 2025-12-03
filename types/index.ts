@@ -34,7 +34,7 @@ export interface Trip {
     driverId: string;
     vehicleId: string;
     customerId: string;
-    status: 'planned' | 'assigned' | 'picked-up' | 'in-transit' | 'delivered';
+    status: 'planned' | 'assigned' | 'picked-up' | 'in-transit' | 'delivered' | 'returned';
     pickupLocation: string;
     dropoffLocation: string;
     pickupTime?: string;
