@@ -37,7 +37,7 @@ export function VehicleLogDialog({ vehicleId, vehiclePlate, trigger }: VehicleLo
         setLoading(true);
 
         try {
-            const { profile } = useStore();
+            const { profile } = useStore.getState();
             if (!profile?.uid) {
                 toast.error("User not authenticated");
                 return;

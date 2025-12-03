@@ -29,16 +29,16 @@ import { toast } from "react-hot-toast";
 
 interface Payment {
   id: string;
-  type: 'trip' | 'salary' | 'expense' | 'other';
+  type: 'trip' | 'salary' | 'expense' | 'fuel' | 'other';
   amount: number;
   description: string;
   date: string;
-  status: 'paid' | 'pending' | 'overdue';
+  status: 'paid' | 'pending' | 'overdue' | 'received';
   relatedId?: string; // Trip ID, Driver ID, etc.
 }
 
 export default function PaymentsPage() {
-  const { trips, drivers, vehicles, payments, addPayment } = useStore();
+  const { trips, drivers, vehicles, payments, addPayment, updatePayment } = useStore();
   const [newPayment, setNewPayment] = useState({
     type: 'other' as 'trip' | 'salary' | 'expense' | 'other',
     amount: '',
@@ -47,17 +47,28 @@ export default function PaymentsPage() {
   });
   
   // Calculate financial metrics
+  // Total Revenue = Received payments from trips
   const totalRevenue = payments
-    .filter((p: any) => p.type === 'trip' && p.status === 'paid')
+    .filter((p: any) => p.type === 'trip' && p.status === 'received')
     .reduce((sum: number, payment: any) => sum + payment.amount, 0);
     
+  // Total Expenses = Salary + Expense payments that are paid
+  // Total Expenses = Salary + Expense + Fuel payments that are paid
   const totalExpenses = payments
-    .filter((p: any) => (p.type === 'salary' || p.type === 'expense') && p.status === 'paid')
+    .filter((p: any) => (p.type === 'salary' || p.type === 'expense' || p.type === 'fuel') && p.status === 'paid')
     .reduce((sum: number, payment: any) => sum + payment.amount, 0);
     
-  const netProfit = totalRevenue - totalExpenses;
+  // Issue Payments = Trip payments that are pending (to be issued)
+  const issuePayments = payments
+    .filter((p: any) => p.type === 'trip' && p.status === 'pending')
+    .reduce((sum: number, payment: any) => sum + payment.amount, 0);
+    
+  // Net Profit = Total Revenue - (Issue Payments + Total Expenses)
+  const netProfit = totalRevenue - (issuePayments + totalExpenses);
   
   const pendingPayments = payments.filter((p: any) => p.status === 'pending').length;
+  
+  // For backward compatibility with existing code that expects this variable
 
   // Remove useEffect since we're now using the store
 
@@ -86,11 +97,23 @@ export default function PaymentsPage() {
     toast.success("Payment added successfully");
   };
 
+  const handleReceivePayment = async (paymentId: string) => {
+    const paymentToUpdate = payments.find((p: any) => p.id === paymentId);
+    if (paymentToUpdate) {
+      await updatePayment({
+        ...paymentToUpdate,
+        status: 'received'
+      });
+      toast.success("Payment marked as received");
+    }
+  };
+
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'trip': return 'bg-blue-100 text-blue-800';
       case 'salary': return 'bg-green-100 text-green-800';
       case 'expense': return 'bg-red-100 text-red-800';
+      case 'fuel': return 'bg-orange-100 text-orange-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -107,9 +130,9 @@ export default function PaymentsPage() {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Payments & Finance</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Payments & Finance Management</h1>
         <p className="text-muted-foreground mt-2">
-          Manage trip payments, driver salaries, and expenses
+          Manage trip payments, driver salaries, fuel expenses, and other costs
         </p>
       </div>
 
@@ -152,12 +175,12 @@ export default function PaymentsPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Payments</CardTitle>
+            <CardTitle className="text-sm font-medium">Issue Payments</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{pendingPayments}</div>
-            <p className="text-xs text-muted-foreground">Awaiting confirmation</p>
+            <div className="text-2xl font-bold">{issuePayments.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">To be issued</p>
           </CardContent>
         </Card>
       </div>
@@ -198,9 +221,21 @@ export default function PaymentsPage() {
                       <TableCell>${payment.amount.toFixed(2)}</TableCell>
                       <TableCell>{format(new Date(payment.date), 'MMM dd, yyyy')}</TableCell>
                       <TableCell>
-                        <Badge className={getStatusColor(payment.status)}>
-                          {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge className={getStatusColor(payment.status)}>
+                            {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                          </Badge>
+                          {payment.type === 'trip' && payment.status === 'pending' && (
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => handleReceivePayment(payment.id)}
+                              className="h-6 px-2 text-xs"
+                            >
+                              Receive
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -229,6 +264,7 @@ export default function PaymentsPage() {
                     <option value="trip">Trip Payment</option>
                     <option value="salary">Driver Salary</option>
                     <option value="expense">Expense</option>
+                    <option value="fuel">Fuel Usage</option>
                     <option value="other">Other</option>
                   </select>
                 </div>
@@ -346,6 +382,24 @@ export default function PaymentsPage() {
                         style={{ 
                           width: `${totalExpenses > 0 ? 
                             (payments.filter((p: any) => p.type === 'expense' && p.status === 'paid').reduce((sum: number, p: any) => sum + p.amount, 0) / totalExpenses * 100) : 0}%` 
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-sm font-medium">Fuel Expenses</span>
+                      <span className="text-sm text-muted-foreground">
+                        ${payments.filter((p: any) => p.type === 'fuel' && p.status === 'paid').reduce((sum: number, p: any) => sum + p.amount, 0).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-yellow-600 h-2 rounded-full" 
+                        style={{ 
+                          width: `${totalExpenses > 0 ? 
+                            (payments.filter((p: any) => p.type === 'fuel' && p.status === 'paid').reduce((sum: number, p: any) => sum + p.amount, 0) / totalExpenses * 100) : 0}%` 
                         }}
                       ></div>
                     </div>

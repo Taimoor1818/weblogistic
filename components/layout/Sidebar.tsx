@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useStore } from "@/store/useStore";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { toast } from "react-hot-toast";
@@ -28,6 +29,7 @@ export function Sidebar() {
     const pathname = usePathname();
     const router = useRouter();
     const { user, isAdmin } = useAuth();
+    const { profile } = useStore();
 
     const handleLogout = async () => {
         try {
@@ -120,7 +122,7 @@ export function Sidebar() {
             <div className="flex h-16 items-center border-b px-6">
                 <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl">
                     <Truck className="h-6 w-6 text-primary" />
-                    <span>WebLogistic</span>
+                    <span>{profile?.companyName || "WebLogistic"}</span>
                 </Link>
             </div>
             <div className="flex-1 overflow-y-auto py-4">

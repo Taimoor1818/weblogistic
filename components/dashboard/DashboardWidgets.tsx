@@ -2,21 +2,24 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useStore } from "@/store/useStore";
+import { useRouter } from "next/navigation";
 
 import { Fuel, TrendingUp, Activity, AlertCircle } from "lucide-react";
 import { useMemo } from "react";
 
 export function DashboardWidgets() {
-    const { trips, drivers, vehicles } = useStore();
+    const { trips, drivers, vehicles, payments } = useStore();
+    const router = useRouter();
 
     const stats = useMemo(() => {
-        const activeTrips = trips.filter((t) => t.status === "in-transit").length;
+        const activeTrips = trips.filter((t) => t.status === "assigned" || t.status === "picked-up" || t.status === "in-transit").length;
         const completedTrips = trips.filter((t) => t.status === "delivered").length;
 
-        // Mock fuel data for now (until we implement expenses)
-        const totalFuel = vehicles.length * 150; // Random mock
+        // Calculate actual fuel usage from payments
+        const fuelExpenses = payments.filter((p: any) => p.type === "expense" && p.description.toLowerCase().includes("fuel"));
+        const totalFuel = fuelExpenses.reduce((sum: number, payment: any) => sum + payment.amount, 0);
 
-        // Driver performance (mock logic based on completed trips)
+        // Driver performance (based on completed trips)
         const topDriver = drivers.reduce((prev, current) => {
             const prevTrips = trips.filter(t => t.driverId === prev.id && t.status === "delivered").length;
             const currTrips = trips.filter(t => t.driverId === current.id && t.status === "delivered").length;
@@ -33,7 +36,7 @@ export function DashboardWidgets() {
 
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-            <Card className="hover:border-primary/50 transition-all">
+            <Card className="hover:border-primary/50 transition-all cursor-pointer" onClick={() => router.push('/dashboard/trips')}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Live Trips</CardTitle>
                     <Activity className="h-4 w-4 text-green-500" />
@@ -41,25 +44,25 @@ export function DashboardWidgets() {
                 <CardContent>
                     <div className="text-2xl font-bold">{stats.activeTrips}</div>
                     <p className="text-xs text-muted-foreground mt-1">
-                        Vehicles currently on road
+                        Assigned trips
                     </p>
                 </CardContent>
             </Card>
 
-            <Card className="hover:border-primary/50 transition-all">
+            <Card className="hover:border-primary/50 transition-all cursor-pointer" onClick={() => router.push('/dashboard/payments')}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Fuel Usage (Est)</CardTitle>
+                    <CardTitle className="text-sm font-medium">Fuel Usage</CardTitle>
                     <Fuel className="h-4 w-4 text-orange-500" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{stats.totalFuel} L</div>
+                    <div className="text-2xl font-bold">${stats.totalFuel.toFixed(2)}</div>
                     <p className="text-xs text-muted-foreground mt-1">
-                        Total consumption this month
+                        Fuel expenses
                     </p>
                 </CardContent>
             </Card>
 
-            <Card className="hover:border-primary/50 transition-all">
+            <Card className="hover:border-primary/50 transition-all cursor-pointer" onClick={() => router.push('/dashboard/drivers')}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Top Driver</CardTitle>
                     <TrendingUp className="h-4 w-4 text-blue-500" />
@@ -72,7 +75,7 @@ export function DashboardWidgets() {
                 </CardContent>
             </Card>
 
-            <Card className="hover:border-primary/50 transition-all">
+            <Card className="hover:border-primary/50 transition-all cursor-pointer" onClick={() => router.push('/dashboard/trips')}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Completed Trips</CardTitle>
                     <AlertCircle className="h-4 w-4 text-purple-500" />
@@ -80,7 +83,7 @@ export function DashboardWidgets() {
                 <CardContent>
                     <div className="text-2xl font-bold">{stats.completedTrips}</div>
                     <p className="text-xs text-muted-foreground mt-1">
-                        Total successful deliveries
+                        Successfully delivered
                     </p>
                 </CardContent>
             </Card>

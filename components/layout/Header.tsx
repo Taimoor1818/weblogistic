@@ -6,10 +6,12 @@ import { Menu, Bell } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { ModeToggle } from "@/components/ui/mode-toggle";
 import { useAuth } from "@/hooks/useAuth";
+import { useStore } from "@/store/useStore";
 import { StatusBadge } from "@/components/ui/status-badge";
 
 export function Header() {
     const { user } = useAuth();
+    const { profile } = useStore();
     
     return (
         <header className="flex h-16 items-center justify-between border-b bg-background px-6 lg:hidden">
@@ -25,7 +27,7 @@ export function Header() {
                         <Sidebar />
                     </SheetContent>
                 </Sheet>
-                <span className="font-bold text-lg">WebLogistic</span>
+                <span className="font-bold text-lg">{profile?.companyName || "WebLogistic"}</span>
             </div>
             <div className="flex items-center gap-4">
                 <div className="hidden sm:flex flex-col items-end">

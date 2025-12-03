@@ -49,11 +49,11 @@ export interface Trip {
 
 export interface Payment {
     id: string;
-    type: 'trip' | 'salary' | 'expense' | 'other';
+    type: 'trip' | 'salary' | 'expense' | 'fuel' | 'other';
     amount: number;
     description: string;
     date: string;
-    status: 'paid' | 'pending' | 'overdue';
+    status: 'paid' | 'pending' | 'overdue' | 'received';
     relatedId?: string; // Trip ID, Driver ID, etc.
 }
 

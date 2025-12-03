@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { StatusBadge } from "@/components/ui/status-badge";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
-    const { isLoading, initialized } = useStore();
+    const { isLoading, initialized, profile } = useStore();
     const { loading: authLoading, isAuthenticated, user } = useAuth();
     const router = useRouter();
 
@@ -76,7 +76,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 {/* Desktop Header */}
                 <div className="hidden lg:flex h-16 items-center justify-between border-b bg-background px-6">
                     <div className="flex items-center gap-2">
-                        <h1 className="text-xl font-bold">WebLogistic</h1>
+                        <h1 className="text-xl font-bold">{profile?.companyName || "WebLogistic"}</h1>
                     </div>
                     <div className="flex items-center gap-4">
                         <div className="flex flex-col items-end">
