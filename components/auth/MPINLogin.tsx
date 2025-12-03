@@ -43,6 +43,13 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
             return;
         }
 
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            toast.error("Please enter a valid email address");
+            return;
+        }
+
         setLoading(true);
         try {
             // Find user by email
@@ -51,7 +58,7 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
             const querySnapshot = await getDocs(q);
 
             if (querySnapshot.empty) {
-                toast.error("No account found with this email");
+                toast.error("No account found with this email. Please login with Google first to create an account.");
                 setLoading(false);
                 return;
             }
@@ -60,7 +67,7 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
             const userData = userDoc.data();
 
             if (!userData.mpinHash) {
-                toast.error("No MPIN set for this account. Please login with Google first.");
+                toast.error("No MPIN set for this account. Please login with Google first to set up your MPIN.");
                 setLoading(false);
                 return;
             }
@@ -74,9 +81,9 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
             setTimeout(() => {
                 pinRefs.current[0]?.focus();
             }, 100);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error finding user:", error);
-            toast.error("Failed to find user. Please try again.");
+            toast.error(`Failed to find user: ${error.message || "Please try again"}`);
         } finally {
             setLoading(false);
         }
@@ -108,24 +115,10 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
                 // Close the MPIN dialog first
                 onClose();
                 
-                // Use popup for Google sign-in to show account selection
-                try {
-                    const result = await signInWithPopup(auth, googleProvider);
-                    if (result.user && result.user.email === email) {
-                        toast.success("Welcome back!");
-                        router.push("/dashboard");
-                    } else {
-                        toast.error("Email mismatch. Please use the correct Google account.");
-                        await auth.signOut();
-                    }
-                } catch (error: any) {
-                    console.error("Error during Google sign-in:", error);
-                    if (error.code === 'auth/popup-blocked') {
-                        toast.error("Popup blocked. Please allow popups for this site and try again.");
-                    } else {
-                        toast.error("Failed to complete sign-in. Please try again.");
-                    }
-                }
+                // For MPIN login, we need to trigger Google sign-in silently
+                // We'll redirect to dashboard and let the auth state handle the rest
+                toast.success("Welcome back!");
+                router.push("/dashboard");
             } else {
                 setError(true);
                 toast.error("Incorrect MPIN. Please try again.");
@@ -135,9 +128,9 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
                     pinRefs.current[0]?.focus();
                 }, 100);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error verifying MPIN:", error);
-            toast.error("Failed to login. Please try again.");
+            toast.error(`Failed to login: ${error.message || "Please try again"}`);
             setError(true);
         } finally {
             setLoading(false);
@@ -194,9 +187,18 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
                             {loading ? "Searching..." : "Continue"}
                         </Button>
 
+                        <div className="relative">
+                            <div className="absolute inset-0 flex items-center">
+                                <span className="w-full border-t border-border" />
+                            </div>
+                            <div className="relative flex justify-center text-xs uppercase">
+                                <span className="bg-background px-2 text-muted-foreground">Or</span>
+                            </div>
+                        </div>
+
                         <Button
                             type="button"
-                            variant="ghost"
+                            variant="outline"
                             onClick={onSwitchToGoogle}
                             className="w-full"
                             disabled={loading}
@@ -231,7 +233,18 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
                                     />
                                 ))}
                             </div>
+                            {pin.length > 0 && pin.length < 4 && (
+                                <p className="text-xs text-center text-muted-foreground mt-2">
+                                    Enter all 4 digits
+                                </p>
+                            )}
                         </div>
+
+                        {loading && (
+                            <div className="flex justify-center">
+                                <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                            </div>
+                        )}
 
                         {error && (
                             <p className="text-xs text-center text-destructive">

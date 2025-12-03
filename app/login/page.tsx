@@ -25,12 +25,20 @@ export default function LoginPage() {
                 router.push("/dashboard");
             }
         } catch (error: any) {
-            console.error(error);
-            // Handle popup blocked error
+            console.error("Google login error:", error);
+            // Handle specific error codes
             if (error.code === 'auth/popup-blocked') {
                 toast.error("Popup blocked. Please allow popups for this site and try again.");
+            } else if (error.code === 'auth/cancelled-popup-request') {
+                // User closed the popup without completing sign in
+                toast.error("Sign in was cancelled. Please try again.");
+            } else if (error.code === 'auth/popup-closed-by-user') {
+                // User closed the popup
+                toast.error("Sign in window was closed. Please try again.");
+            } else if (error.code === 'auth/network-request-failed') {
+                toast.error("Network error. Please check your connection and try again.");
             } else {
-                toast.error("Failed to login. Please try again.");
+                toast.error(`Login failed: ${error.message || "Please try again"}`);
             }
         } finally {
             setLoading(false);
@@ -75,6 +83,7 @@ export default function LoginPage() {
                         className="w-full py-6 text-lg font-medium transition-all hover:scale-[1.02] bg-white/20 border-white/30 text-white hover:bg-white/30 hover:border-white/50"
                         onClick={handleLogin}
                         disabled={loading}
+                        type="button"
                     >
                         {loading ? (
                             <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -102,6 +111,12 @@ export default function LoginPage() {
                             </div>
                         )}
                     </Button>
+
+                    {loading && (
+                        <p className="text-center text-sm text-white/80">
+                            Please check your browser for the authentication popup
+                        </p>
+                    )}
 
                     <div className="relative">
                         <div className="absolute inset-0 flex items-center">
