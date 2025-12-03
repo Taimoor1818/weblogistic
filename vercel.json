@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "public": false,
+  "builds": [
+    {
+      "src": "vercel-build.sh",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": ".next"
+      }
+    }
+  ]
+}

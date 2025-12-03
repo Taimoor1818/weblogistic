@@ -13,29 +13,33 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Download } from "lucide-react";
+import { Edit, Download, Phone, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { DeliveryProof } from "@/components/trips/DeliveryProof";
 import { exportToExcel } from "@/lib/export";
 
 export default function TripsPage() {
-    const { trips, drivers, vehicles, customers } = useStore();
+    const { trips, drivers, vehicles, customers, deleteTrip } = useStore();
 
-    const getDriverName = (id: string) => drivers.find((d) => d.id === id)?.name || "Unknown";
+    const getDriver = (id: string) => drivers.find((d) => d.id === id);
     const getVehiclePlate = (id: string) => vehicles.find((v) => v.id === id)?.plateNumber || "Unknown";
-    const getCustomerName = (id: string) => customers.find((c) => c.id === id)?.name || "Unknown";
+    const getCustomer = (id: string) => customers.find((c) => c.id === id);
 
     const handleExport = () => {
-        const data = trips.map((t) => ({
-            ID: t.id,
-            Customer: getCustomerName(t.customerId),
-            Driver: getDriverName(t.driverId),
-            Vehicle: getVehiclePlate(t.vehicleId),
-            Status: t.status,
-            Pickup: t.pickupLocation,
-            Dropoff: t.dropoffLocation,
-            Date: format(new Date(t.createdAt), "yyyy-MM-dd HH:mm"),
-        }));
+        const data = trips.map((t) => {
+            const driver = getDriver(t.driverId);
+            const customer = getCustomer(t.customerId);
+            return {
+                ID: t.id,
+                Customer: customer?.name || "Unknown",
+                Driver: driver?.name || "Unknown",
+                Vehicle: getVehiclePlate(t.vehicleId),
+                Status: t.status,
+                Pickup: t.pickupLocation,
+                Dropoff: t.dropoffLocation,
+                Date: format(new Date(t.createdAt), "yyyy-MM-dd HH:mm"),
+            };
+        });
         exportToExcel(data, "Trips_Report", "Trips");
     };
 
@@ -87,8 +91,36 @@ export default function TripsPage() {
                                         <TableCell className="font-mono text-xs">
                                             {trip.id.slice(0, 8)}
                                         </TableCell>
-                                        <TableCell>{getCustomerName(trip.customerId)}</TableCell>
-                                        <TableCell>{getDriverName(trip.driverId)}</TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center">
+                                                {getCustomer(trip.customerId)?.name || "Unknown"}
+                                                {getCustomer(trip.customerId)?.phone && (
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        className="ml-2 p-1 h-auto"
+                                                        onClick={() => window.open(`https://wa.me/${getCustomer(trip.customerId)?.phone}`, '_blank')}
+                                                    >
+                                                        <Phone className="w-4 h-4 text-green-600" />
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center">
+                                                {getDriver(trip.driverId)?.name || "Unknown"}
+                                                {getDriver(trip.driverId)?.phone && (
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        className="ml-2 p-1 h-auto"
+                                                        onClick={() => window.open(`https://wa.me/${getDriver(trip.driverId)?.phone}`, '_blank')}
+                                                    >
+                                                        <Phone className="w-4 h-4 text-green-600" />
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </TableCell>
                                         <TableCell>{getVehiclePlate(trip.vehicleId)}</TableCell>
                                         <TableCell className="max-w-[200px] truncate">
                                             <span className="text-xs text-muted-foreground">From:</span> {trip.pickupLocation}
@@ -117,14 +149,27 @@ export default function TripsPage() {
                                                 {trip.status === "in-transit" && (
                                                     <DeliveryProof trip={trip} />
                                                 )}
-                                                <TripDialog
-                                                    trip={trip}
-                                                    trigger={
-                                                        <Button variant="ghost" size="icon">
-                                                            <Edit className="h-4 w-4" />
-                                                        </Button>
-                                                    }
-                                                />
+                                                <div className="flex gap-1">
+                                                    <TripDialog
+                                                        trip={trip}
+                                                        trigger={
+                                                            <Button variant="ghost" size="icon">
+                                                                <Edit className="h-4 w-4" />
+                                                            </Button>
+                                                        }
+                                                    />
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon"
+                                                        onClick={() => {
+                                                            if (window.confirm('Are you sure you want to delete this trip?')) {
+                                                                deleteTrip(trip.id);
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Trash2 className="h-4 w-4 text-red-500" />
+                                                    </Button>
+                                                </div>
                                             </div>
                                         </TableCell>
                                     </TableRow>

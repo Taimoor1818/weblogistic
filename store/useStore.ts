@@ -28,6 +28,7 @@ interface StoreState extends AppData {
 
     addTrip: (trip: Omit<Trip, 'id'>) => Promise<void>;
     updateTrip: (trip: Trip) => Promise<void>;
+    deleteTrip: (tripId: string) => Promise<void>;
 }
 
 const initialState: AppData = {
@@ -307,6 +308,22 @@ export const useStore = create<StoreState>((set, get) => ({
         } catch (error) {
             console.error(error);
             toast.error('Failed to update trip');
+        }
+    },
+
+    deleteTrip: async (tripId) => {
+        const { profile } = get();
+        if (!profile) {
+            toast.error('User not authenticated');
+            return;
+        }
+        
+        try {
+            await deleteDoc(doc(db, 'users', profile.uid, 'trips', tripId));
+            toast.success('Trip deleted');
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to delete trip');
         }
     },
 }));

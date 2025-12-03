@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { Trip } from "@/types";
+import { useForm, useWatch } from "react-hook-form";
+import { Trip, Driver } from "@/types";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -22,33 +22,62 @@ import {
 } from "@/components/ui/select";
 import { useStore } from "@/store/useStore";
 
-import { Plus } from "lucide-react";
+import { Plus, Circle } from "lucide-react";
 
 interface TripDialogProps {
     trip?: Trip;
     trigger?: React.ReactNode;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
 }
 
-export function TripDialog({ trip, trigger }: TripDialogProps) {
-    const [open, setOpen] = useState(false);
-    const { addTrip, updateTrip, drivers, vehicles, customers } = useStore();
-
-    const { register, handleSubmit, reset, setValue } = useForm<Trip>({
+export function TripDialog({ trip, trigger, open: controlledOpen, onOpenChange: controlledOnOpenChange }: TripDialogProps) {
+    const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+    
+    const open = controlledOpen !== undefined ? controlledOpen : uncontrolledOpen;
+    const setOpen = controlledOnOpenChange !== undefined ? controlledOnOpenChange : setUncontrolledOpen;
+    const { addTrip, updateTrip, updateDriver, drivers, vehicles, customers } = useStore();
+    
+    const { register, handleSubmit, reset, setValue, control } = useForm<Trip>({
         defaultValues: trip || {
             status: "planned",
         },
+    });
+    
+    const watchDriverId = useWatch({
+        control,
+        name: "driverId",
+        defaultValue: trip?.driverId || ""
     });
 
     const onSubmit = async (data: Trip) => {
         try {
             if (trip) {
+                // Update existing trip
                 await updateTrip({ ...trip, ...data });
+                
+                // Update driver status if trip is assigned
+                if (data.status === 'assigned' && data.driverId) {
+                    const driver = drivers.find(d => d.id === data.driverId);
+                    if (driver && driver.status !== 'busy') {
+                        updateDriver({ ...driver, status: 'busy' });
+                    }
+                }
             } else {
+                // Create new trip
                 await addTrip({
                     ...data,
                     createdAt: new Date().toISOString(),
                     status: "planned",
                 });
+                
+                // Update driver status if trip is assigned
+                if (data.status === 'assigned' && data.driverId) {
+                    const driver = drivers.find(d => d.id === data.driverId);
+                    if (driver && driver.status !== 'busy') {
+                        updateDriver({ ...driver, status: 'busy' });
+                    }
+                }
             }
             setOpen(false);
             reset();
@@ -84,7 +113,12 @@ export function TripDialog({ trip, trigger }: TripDialogProps) {
                             <SelectContent>
                                 {customers.map((c) => (
                                     <SelectItem key={c.id} value={c.id}>
-                                        {c.name}
+                                        <div className="flex items-center">
+                                            {c.name}
+                                            {c.phone && (
+                                                <span className="ml-2 text-xs text-muted-foreground">({c.phone})</span>
+                                            )}
+                                        </div>
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -104,7 +138,16 @@ export function TripDialog({ trip, trigger }: TripDialogProps) {
                                 <SelectContent>
                                     {drivers.map((d) => (
                                         <SelectItem key={d.id} value={d.id}>
-                                            {d.name} ({d.status})
+                                            <div className="flex items-center">
+                                                <Circle 
+                                                    className={`w-3 h-3 mr-2 ${d.status === 'available' ? 'text-green-500' : d.status === 'busy' ? 'text-red-500 animate-pulse' : 'text-gray-500'}`} 
+                                                    fill={d.status === 'available' ? 'currentColor' : d.status === 'busy' ? 'currentColor' : 'none'}
+                                                />
+                                                {d.name} 
+                                                {d.phone && (
+                                                    <span className="ml-2 text-xs text-muted-foreground">({d.phone})</span>
+                                                )}
+                                            </div>
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -151,7 +194,17 @@ export function TripDialog({ trip, trigger }: TripDialogProps) {
                         <div className="grid gap-2">
                             <Label htmlFor="status">Status</Label>
                             <Select
-                                onValueChange={(value) => setValue("status", value as 'planned' | 'assigned' | 'picked-up' | 'in-transit' | 'delivered')}
+                                onValueChange={(value) => {
+                                    setValue("status", value as 'planned' | 'assigned' | 'picked-up' | 'in-transit' | 'delivered');
+                                    
+                                    // Update driver status when trip status changes
+                                    if (value === 'assigned' && watchDriverId) {
+                                        const driver = drivers.find(d => d.id === watchDriverId);
+                                        if (driver && driver.status !== 'busy') {
+                                            updateDriver({ ...driver, status: 'busy' });
+                                        }
+                                    }
+                                }}
                                 defaultValue={trip.status}
                             >
                                 <SelectTrigger>
