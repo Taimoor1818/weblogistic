@@ -56,6 +56,7 @@ export interface UserProfile {
     phone?: string;
     subscriptionStatus?: string;
     role?: string;
+    mpinHash?: string;
 }
 
 export interface TeamMember {

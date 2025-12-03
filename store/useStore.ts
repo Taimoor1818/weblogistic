@@ -73,7 +73,7 @@ export const useStore = create<StoreState>((set, get) => ({
                     const data = docSnap.data();
                     // Only update profile and settings from user doc
                     set((state) => ({
-                        profile: { ...state.profile, ...data.profile } as UserProfile,
+                        profile: { ...state.profile, ...data.profile, mpinHash: data.mpinHash } as UserProfile,
                         settings: data.settings || state.settings
                     }));
                 }
