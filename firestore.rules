@@ -47,19 +47,24 @@ service cloud.firestore {
       allow read, create, update, delete: if isAuthenticated() && isOwner(userId);
     }
     
-    // Vehicles collection
-    match /vehicles/{vehicleId} {
-      allow read, write: if isAuthenticated();
+    // Vehicles - stored as subcollection of users
+    match /users/{userId}/vehicles/{vehicleId} {
+      allow read, create, update, delete: if isAuthenticated() && isOwner(userId);
     }
     
-    // Customers collection
-    match /customers/{customerId} {
-      allow read, write: if isAuthenticated();
+    // Customers - stored as subcollection of users
+    match /users/{userId}/customers/{customerId} {
+      allow read, create, update, delete: if isAuthenticated() && isOwner(userId);
     }
     
-    // Trips collection
-    match /trips/{tripId} {
-      allow read, write: if isAuthenticated();
+    // Trips - stored as subcollection of users
+    match /users/{userId}/trips/{tripId} {
+      allow read, create, update, delete: if isAuthenticated() && isOwner(userId);
+    }
+    
+    // Maintenance logs - stored as subcollection of users
+    match /users/{userId}/maintenance_logs/{logId} {
+      allow read, create, update, delete: if isAuthenticated() && isOwner(userId);
     }
 
   }

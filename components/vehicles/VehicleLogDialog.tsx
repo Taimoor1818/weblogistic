@@ -12,6 +12,7 @@ import { db } from "@/lib/firebase";
 import { toast } from "react-hot-toast";
 import { Wrench, Calendar, DollarSign, Gauge } from "lucide-react";
 import { MaintenanceType } from "@/lib/types";
+import { useStore } from "@/store/useStore";
 
 interface VehicleLogDialogProps {
     vehicleId: string;
@@ -36,7 +37,13 @@ export function VehicleLogDialog({ vehicleId, vehiclePlate, trigger }: VehicleLo
         setLoading(true);
 
         try {
-            await addDoc(collection(db, "maintenance_logs"), {
+            const { profile } = useStore();
+            if (!profile?.uid) {
+                toast.error("User not authenticated");
+                return;
+            }
+
+            await addDoc(collection(db, "users", profile.uid, "maintenance_logs"), {
                 vehicleId,
                 type: formData.type,
                 date: new Date(formData.date),

@@ -96,21 +96,30 @@ export const useStore = create<StoreState>((set, get) => ({
             });
             unsubscribers.push(teamMembersUnsub);
 
-            // 3. Subscribe to Shared Collections (vehicles, customers, trips)
-            const sharedCollections = [
-                { name: 'vehicles', setter: 'vehicles' },
-                { name: 'customers', setter: 'customers' },
-                { name: 'trips', setter: 'trips' }
-            ];
-
-            sharedCollections.forEach(({ name, setter }) => {
-                const q = query(collection(db, name));
-                const unsub = onSnapshot(q, (snapshot) => {
-                    const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    set({ [setter]: items } as Partial<StoreState>);
-                });
-                unsubscribers.push(unsub);
+            // 3. Subscribe to User Subcollections (vehicles, customers, trips)
+            // Fetch vehicles from user's vehicles subcollection
+            const vehiclesQuery = query(collection(db, 'users', uid, 'vehicles'));
+            const vehiclesUnsub = onSnapshot(vehiclesQuery, (snapshot) => {
+                const vehicles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Vehicle));
+                set({ vehicles });
             });
+            unsubscribers.push(vehiclesUnsub);
+
+            // Fetch customers from user's customers subcollection
+            const customersQuery = query(collection(db, 'users', uid, 'customers'));
+            const customersUnsub = onSnapshot(customersQuery, (snapshot) => {
+                const customers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer));
+                set({ customers });
+            });
+            unsubscribers.push(customersUnsub);
+
+            // Fetch trips from user's trips subcollection
+            const tripsQuery = query(collection(db, 'users', uid, 'trips'));
+            const tripsUnsub = onSnapshot(tripsQuery, (snapshot) => {
+                const trips = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Trip));
+                set({ trips });
+            });
+            unsubscribers.push(tripsUnsub);
 
             set({ unsubscribers, isLoading: false, initialized: true });
 
@@ -171,8 +180,14 @@ export const useStore = create<StoreState>((set, get) => ({
     },
 
     addVehicle: async (vehicle) => {
+        const { profile } = get();
+        if (!profile) {
+            toast.error('User not authenticated');
+            return;
+        }
+        
         try {
-            await addDoc(collection(db, 'vehicles'), vehicle);
+            await addDoc(collection(db, 'users', profile.uid, 'vehicles'), vehicle);
             toast.success('Vehicle added');
         } catch (error) {
             console.error(error);
@@ -181,9 +196,15 @@ export const useStore = create<StoreState>((set, get) => ({
     },
 
     updateVehicle: async (vehicle) => {
+        const { profile } = get();
+        if (!profile) {
+            toast.error('User not authenticated');
+            return;
+        }
+        
         try {
             const { id, ...data } = vehicle;
-            await updateDoc(doc(db, 'vehicles', id), data);
+            await updateDoc(doc(db, 'users', profile.uid, 'vehicles', id), data);
             toast.success('Vehicle updated');
         } catch (error) {
             console.error(error);
@@ -192,8 +213,14 @@ export const useStore = create<StoreState>((set, get) => ({
     },
 
     deleteVehicle: async (vehicleId) => {
+        const { profile } = get();
+        if (!profile) {
+            toast.error('User not authenticated');
+            return;
+        }
+        
         try {
-            await deleteDoc(doc(db, 'vehicles', vehicleId));
+            await deleteDoc(doc(db, 'users', profile.uid, 'vehicles', vehicleId));
             toast.success('Vehicle deleted');
         } catch (error) {
             console.error(error);
@@ -202,8 +229,14 @@ export const useStore = create<StoreState>((set, get) => ({
     },
 
     addCustomer: async (customer) => {
+        const { profile } = get();
+        if (!profile) {
+            toast.error('User not authenticated');
+            return;
+        }
+        
         try {
-            await addDoc(collection(db, 'customers'), customer);
+            await addDoc(collection(db, 'users', profile.uid, 'customers'), customer);
             toast.success('Customer added');
         } catch (error) {
             console.error(error);
@@ -212,9 +245,15 @@ export const useStore = create<StoreState>((set, get) => ({
     },
 
     updateCustomer: async (customer) => {
+        const { profile } = get();
+        if (!profile) {
+            toast.error('User not authenticated');
+            return;
+        }
+        
         try {
             const { id, ...data } = customer;
-            await updateDoc(doc(db, 'customers', id), data);
+            await updateDoc(doc(db, 'users', profile.uid, 'customers', id), data);
             toast.success('Customer updated');
         } catch (error) {
             console.error(error);
@@ -223,8 +262,14 @@ export const useStore = create<StoreState>((set, get) => ({
     },
 
     deleteCustomer: async (customerId) => {
+        const { profile } = get();
+        if (!profile) {
+            toast.error('User not authenticated');
+            return;
+        }
+        
         try {
-            await deleteDoc(doc(db, 'customers', customerId));
+            await deleteDoc(doc(db, 'users', profile.uid, 'customers', customerId));
             toast.success('Customer deleted');
         } catch (error) {
             console.error(error);
@@ -233,8 +278,14 @@ export const useStore = create<StoreState>((set, get) => ({
     },
 
     addTrip: async (trip) => {
+        const { profile } = get();
+        if (!profile) {
+            toast.error('User not authenticated');
+            return;
+        }
+        
         try {
-            await addDoc(collection(db, 'trips'), trip);
+            await addDoc(collection(db, 'users', profile.uid, 'trips'), trip);
             toast.success('Trip added');
         } catch (error) {
             console.error(error);
@@ -243,9 +294,15 @@ export const useStore = create<StoreState>((set, get) => ({
     },
 
     updateTrip: async (trip) => {
+        const { profile } = get();
+        if (!profile) {
+            toast.error('User not authenticated');
+            return;
+        }
+        
         try {
             const { id, ...data } = trip;
-            await updateDoc(doc(db, 'trips', id), data);
+            await updateDoc(doc(db, 'users', profile.uid, 'trips', id), data);
             toast.success('Trip updated');
         } catch (error) {
             console.error(error);
