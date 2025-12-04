@@ -35,9 +35,14 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         handleRedirectResult();
 
         const unsubscribe = onAuthStateChanged(auth, (user) => {
-            // Check if we have MPIN session authentication
-            const mpinSession = sessionStorage.getItem('mpin_auth_session');
-            if (!user && !mpinSession) {
+            // Check if we have MPIN session authentication only on client side
+            if (typeof window !== 'undefined') {
+                const mpinSession = sessionStorage.getItem('mpin_auth_session');
+                if (!user && !mpinSession) {
+                    router.push("/login");
+                }
+            } else if (!user) {
+                // Server side - redirect to login if no user
                 router.push("/login");
             }
         });
@@ -47,18 +52,27 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
     // Handle authentication redirect in useEffect to avoid React warnings
     useEffect(() => {
-        // Check if we have MPIN session authentication
-        const mpinSession = sessionStorage.getItem('mpin_auth_session');
-        if (!authLoading && !isAuthenticated && !mpinSession) {
+        // Check if we have MPIN session authentication only on client side
+        if (typeof window !== 'undefined') {
+            const mpinSession = sessionStorage.getItem('mpin_auth_session');
+            if (!authLoading && !isAuthenticated && !mpinSession) {
+                router.push("/login");
+            }
+        } else if (!authLoading && !isAuthenticated) {
+            // Server side - redirect to login if not authenticated
             router.push("/login");
         }
     }, [authLoading, isAuthenticated, router]);
 
     // Show loading spinner while authenticating or initializing store
     if (authLoading || (!isAuthenticated && !authLoading) || (isAuthenticated && isLoading && !initialized)) {
-        // Check if we have MPIN session authentication
-        const mpinSession = sessionStorage.getItem('mpin_auth_session');
-        if (!mpinSession) {
+        // Check if we have MPIN session authentication only on client side
+        let hasMPINSession = false;
+        if (typeof window !== 'undefined') {
+            hasMPINSession = !!sessionStorage.getItem('mpin_auth_session');
+        }
+        
+        if (!hasMPINSession) {
             return (
                 <div className="flex h-screen items-center justify-center">
                     <div className="text-center">

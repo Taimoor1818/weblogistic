@@ -21,8 +21,11 @@ export default function DashboardPage() {
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-            // Check if we have MPIN session authentication
-            const mpinSession = sessionStorage.getItem('mpin_auth_session');
+            // Check if we have MPIN session authentication only on client side
+            let mpinSession = null;
+            if (typeof window !== 'undefined') {
+                mpinSession = sessionStorage.getItem('mpin_auth_session');
+            }
             
             if (firebaseUser || mpinSession) {
                 try {

@@ -10,35 +10,53 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Users, Calendar } from "lucide-react";
 import { format } from "date-fns";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function AllUsersPage() {
     const [users, setUsers] = useState<(User & { id: string })[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const { isAuthenticated, isAdmin, loading: authLoading } = useAuth();
+    const router = useRouter();
+
+    // Redirect if not admin or not authenticated
+    useEffect(() => {
+        if (!authLoading) {
+            if (!isAuthenticated) {
+                router.push("/login");
+            } else if (!isAdmin) {
+                router.push("/dashboard");
+            }
+        }
+    }, [isAuthenticated, isAdmin, authLoading, router]);
 
     useEffect(() => {
-        const fetchUsers = async () => {
-            try {
-                setLoading(true);
-                const usersSnapshot = await getDocs(collection(db, "users"));
-                const usersData = usersSnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...(doc.data() as User)
-                }));
-                
-                setUsers(usersData);
-            } catch (err) {
-                console.error("Error fetching users:", err);
-                setError("Failed to load users");
-            } finally {
-                setLoading(false);
-            }
-        };
+        // Only fetch users if authenticated and admin
+        if (isAuthenticated && isAdmin) {
+            const fetchUsers = async () => {
+                try {
+                    setLoading(true);
+                    const usersSnapshot = await getDocs(collection(db, "users"));
+                    const usersData = usersSnapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...(doc.data() as User)
+                    }));
+                    
+                    setUsers(usersData);
+                } catch (err) {
+                    console.error("Error fetching users:", err);
+                    setError("Failed to load users");
+                } finally {
+                    setLoading(false);
+                }
+            };
 
-        fetchUsers();
-    }, []);
+            fetchUsers();
+        }
+    }, [isAuthenticated, isAdmin]);
 
-    if (loading) {
+    if (authLoading || loading) {
         return (
             <div className="container mx-auto py-8">
                 <div className="flex items-center justify-center min-h-[60vh]">
@@ -63,6 +81,11 @@ export default function AllUsersPage() {
                 </Card>
             </div>
         );
+    }
+
+    // If not admin, don't show content
+    if (!isAdmin) {
+        return null;
     }
 
     return (
