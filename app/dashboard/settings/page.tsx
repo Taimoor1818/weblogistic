@@ -11,6 +11,8 @@ import { MPINSetup } from "@/components/auth/MPINSetup";
 import { MPINVerify } from "@/components/auth/MPINVerify";
 import { toast } from "react-hot-toast";
 import { Building2, MapPin, Phone, KeyRound, User, Save, Edit2 } from "lucide-react";
+import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 export default function SettingsPage() {
     const { user, loading: authLoading } = useAuth();
@@ -18,12 +20,30 @@ export default function SettingsPage() {
     const [loading, setLoading] = useState(false);
     const [showMPINSetup, setShowMPINSetup] = useState(false);
     const [showMPINVerify, setShowMPINVerify] = useState(false);
+    const [hasMPIN, setHasMPIN] = useState(false);
 
     const [formData, setFormData] = useState({
         companyName: "",
         city: "",
         mobileNumber: "",
     });
+
+    // Check if user has MPIN set
+    useEffect(() => {
+        const checkMPINStatus = async () => {
+            if (user) {
+                try {
+                    const mpinRecordRef = doc(db, "mpin_records", user.uid);
+                    const mpinRecordSnap = await getDoc(mpinRecordRef);
+                    setHasMPIN(mpinRecordSnap.exists());
+                } catch (error) {
+                    console.error("Error checking MPIN status:", error);
+                }
+            }
+        };
+
+        checkMPINStatus();
+    }, [user]);
 
     useEffect(() => {
         if (user) {
@@ -36,11 +56,15 @@ export default function SettingsPage() {
     }, [user]);
 
     const handleEditClick = () => {
-        if (!user?.mpinHash) {
+        if (!user) return;
+        
+        // Check if MPIN is set
+        if (!hasMPIN) {
             toast.error("Please set up your MPIN first");
             setShowMPINSetup(true);
             return;
         }
+        
         setShowMPINVerify(true);
     };
 
@@ -101,55 +125,14 @@ export default function SettingsPage() {
                                 {user.email}
                             </div>
                         </div>
-                        <div className="grid gap-2">
-                            <Label className="text-muted-foreground">Name</Label>
-                            <div className="px-4 py-2 rounded-lg bg-muted text-sm">
-                                {user.displayName}
-                            </div>
-                        </div>
-                        <div className="grid gap-2">
-                            <Label className="text-muted-foreground">Role</Label>
-                            <div className="px-4 py-2 rounded-lg bg-muted text-sm capitalize">
-                                {user.role}
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
 
-                {/* Company Profile */}
-                <Card className="border-2 hover:border-primary/50 transition-colors">
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <Building2 className="h-5 w-5 text-primary" />
-                                <CardTitle>Company Profile</CardTitle>
-                            </div>
-                            {!isEditing && (
-                                <Button onClick={handleEditClick} variant="outline" size="sm">
-                                    <Edit2 className="h-4 w-4 mr-2" />
-                                    Edit
-                                </Button>
-                            )}
-                        </div>
-                        <CardDescription>
-                            Your business information and contact details
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="companyName" className="flex items-center gap-2">
-                                <Building2 className="h-4 w-4 text-muted-foreground" />
-                                Company Name
-                            </Label>
+                            <Label className="text-muted-foreground">Company Name</Label>
                             {isEditing ? (
                                 <Input
-                                    id="companyName"
                                     value={formData.companyName}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, companyName: e.target.value })
-                                    }
+                                    onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                                     placeholder="Enter company name"
-                                    className="transition-all"
                                 />
                             ) : (
                                 <div className="px-4 py-2 rounded-lg bg-muted text-sm">
@@ -158,48 +141,36 @@ export default function SettingsPage() {
                             )}
                         </div>
 
-                        <div className="grid gap-2">
-                            <Label htmlFor="city" className="flex items-center gap-2">
-                                <MapPin className="h-4 w-4 text-muted-foreground" />
-                                City
-                            </Label>
-                            {isEditing ? (
-                                <Input
-                                    id="city"
-                                    value={formData.city}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, city: e.target.value })
-                                    }
-                                    placeholder="Enter city"
-                                    className="transition-all"
-                                />
-                            ) : (
-                                <div className="px-4 py-2 rounded-lg bg-muted text-sm">
-                                    {formData.city || "Not set"}
-                                </div>
-                            )}
-                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="grid gap-2">
+                                <Label className="text-muted-foreground">City</Label>
+                                {isEditing ? (
+                                    <Input
+                                        value={formData.city}
+                                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                                        placeholder="Enter city"
+                                    />
+                                ) : (
+                                    <div className="px-4 py-2 rounded-lg bg-muted text-sm">
+                                        {formData.city || "Not set"}
+                                    </div>
+                                )}
+                            </div>
 
-                        <div className="grid gap-2">
-                            <Label htmlFor="mobileNumber" className="flex items-center gap-2">
-                                <Phone className="h-4 w-4 text-muted-foreground" />
-                                Mobile Number
-                            </Label>
-                            {isEditing ? (
-                                <Input
-                                    id="mobileNumber"
-                                    value={formData.mobileNumber}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, mobileNumber: e.target.value })
-                                    }
-                                    placeholder="Enter mobile number"
-                                    className="transition-all"
-                                />
-                            ) : (
-                                <div className="px-4 py-2 rounded-lg bg-muted text-sm">
-                                    {formData.mobileNumber || "Not set"}
-                                </div>
-                            )}
+                            <div className="grid gap-2">
+                                <Label className="text-muted-foreground">Mobile Number</Label>
+                                {isEditing ? (
+                                    <Input
+                                        value={formData.mobileNumber}
+                                        onChange={(e) => setFormData({ ...formData, mobileNumber: e.target.value })}
+                                        placeholder="Enter mobile number"
+                                    />
+                                ) : (
+                                    <div className="px-4 py-2 rounded-lg bg-muted text-sm">
+                                        {formData.mobileNumber || "Not set"}
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         {isEditing && (
@@ -244,7 +215,7 @@ export default function SettingsPage() {
                             className="w-full"
                         >
                             <KeyRound className="h-4 w-4 mr-2" />
-                            {user.mpinHash ? "Change MPIN" : "Set Up MPIN"}
+                            {hasMPIN ? "Change MPIN" : "Set Up MPIN"}
                         </Button>
                         <p className="text-xs text-muted-foreground mt-2">
                             Use MPIN to secure sensitive operations like editing and deleting data
@@ -254,22 +225,23 @@ export default function SettingsPage() {
             </div>
 
             {/* Modals */}
-            <MPINSetup
-                open={showMPINSetup}
-                onClose={() => setShowMPINSetup(false)}
-                userId={user.uid}
-                onSuccess={() => {
-                    toast.success("MPIN set successfully!");
-                }}
-                required={!user?.mpinHash} // Require MPIN setup if user doesn't have one yet
-                hasMPIN={!!user?.mpinHash} // Pass whether user already has an MPIN
-            />
+            {user && (
+                <MPINSetup
+                    open={showMPINSetup}
+                    onClose={() => setShowMPINSetup(false)}
+                    userId={user.uid}
+                    userEmail={user.email}
+                    onSuccess={() => {
+                        toast.success("MPIN set successfully!");
+                        setHasMPIN(true);
+                    }}
+                />
+            )}
 
-            {user.mpinHash && (
+            {user && (
                 <MPINVerify
                     open={showMPINVerify}
                     onClose={() => setShowMPINVerify(false)}
-                    mpinHash={user.mpinHash}
                     onSuccess={handleMPINVerified}
                     title="Verify to Edit"
                     description="Enter your MPIN to edit company profile"

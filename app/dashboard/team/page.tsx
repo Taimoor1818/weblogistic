@@ -49,27 +49,18 @@ export default function TeamPage() {
     const handleAddMember = async () => {
         if (!user || !newMemberEmail) return;
 
-        // Check if MPIN is set
-        if (!user.mpinHash) {
-            toast.error("Please set up your MPIN in Settings first");
-            return;
-        }
-
         setActionType("add");
         setShowMPINVerify(true);
     };
 
     const handleDeleteClick = (memberId: string) => {
-        if (!user?.mpinHash) {
-            toast.error("Please set up your MPIN in Settings first");
-            return;
-        }
         setMemberToDelete(memberId);
         setActionType("delete");
         setShowMPINVerify(true);
     };
 
-    const onMPINVerified = async () => {
+    const onMPINVerified = async (pin: string) => {
+        // In the new approach, we just proceed with the action
         if (actionType === "add") {
             await executeAddMember();
         } else {
@@ -103,23 +94,23 @@ export default function TeamPage() {
             fetchTeamMembers();
         } catch (error) {
             console.error("Error adding team member:", error);
-            toast.error("Failed to add team member");
+            toast.error("Failed to add team member. Please try again.");
         } finally {
             setLoading(false);
         }
     };
 
     const executeDeleteMember = async () => {
-        if (!memberToDelete || !user) return;
+        if (!user || !memberToDelete) return;
         setLoading(true);
         try {
             await deleteDoc(doc(db, "users", user.uid, "teamMembers", memberToDelete));
-            toast.success("Team member removed");
+            toast.success("Team member removed successfully");
             setMemberToDelete(null);
             fetchTeamMembers();
         } catch (error) {
             console.error("Error removing team member:", error);
-            toast.error("Failed to remove team member");
+            toast.error("Failed to remove team member. Please try again.");
         } finally {
             setLoading(false);
         }
@@ -133,152 +124,137 @@ export default function TeamPage() {
         );
     }
 
+    if (!user) return null;
+
     return (
-        <div className="container mx-auto py-8 px-4 max-w-5xl">
-            <div className="flex items-center justify-between mb-8">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Team Management</h1>
-                    <p className="text-muted-foreground mt-2">
-                        Manage your team members and their access
-                    </p>
-                </div>
-                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button className="gap-2">
-                            <UserPlus className="h-4 w-4" />
-                            Add Member
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Add Team Member</DialogTitle>
-                            <DialogDescription>
-                                Enter the email address of the team member you want to add.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="email">Email Address</Label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    placeholder="colleague@example.com"
-                                    value={newMemberEmail}
-                                    onChange={(e) => setNewMemberEmail(e.target.value)}
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="mobile">Mobile Number (WhatsApp)</Label>
-                                <Input
-                                    id="mobile"
-                                    type="tel"
-                                    placeholder="e.g. 923001234567"
-                                    value={newMemberMobile}
-                                    onChange={(e) => setNewMemberMobile(e.target.value)}
-                                />
-                            </div>
-                            <Button onClick={handleAddMember} disabled={loading}>
-                                {loading ? "Adding..." : "Add Member"}
+        <div className="container mx-auto py-8 px-4">
+            <div className="mb-8">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight">Team Management</h1>
+                        <p className="text-muted-foreground mt-2">
+                            Manage your team members and their permissions
+                        </p>
+                    </div>
+                    <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button>
+                                <UserPlus className="h-4 w-4 mr-2" />
+                                Add Member
                             </Button>
-                        </div>
-                    </DialogContent>
-                </Dialog>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Add Team Member</DialogTitle>
+                                <DialogDescription>
+                                    Invite a new member to join your team
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="email">Email</Label>
+                                    <Input
+                                        id="email"
+                                        type="email"
+                                        placeholder="member@example.com"
+                                        value={newMemberEmail}
+                                        onChange={(e) => setNewMemberEmail(e.target.value)}
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="mobile">Mobile (Optional)</Label>
+                                    <Input
+                                        id="mobile"
+                                        type="tel"
+                                        placeholder="+1 (555) 123-4567"
+                                        value={newMemberMobile}
+                                        onChange={(e) => setNewMemberMobile(e.target.value)}
+                                    />
+                                </div>
+                                <Button onClick={handleAddMember} disabled={loading || !newMemberEmail}>
+                                    {loading ? (
+                                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                                    ) : (
+                                        <Send className="h-4 w-4 mr-2" />
+                                    )}
+                                    Send Invitation
+                                </Button>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+                </div>
             </div>
 
-            <div className="grid gap-6">
+            <div>
                 {members.length === 0 ? (
-                    <Card className="border-dashed">
-                        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                            <div className="rounded-full bg-primary/10 p-4 mb-4">
-                                <Users className="h-8 w-8 text-primary" />
-                            </div>
-                            <h3 className="text-lg font-semibold">No team members yet</h3>
-                            <p className="text-muted-foreground max-w-sm mt-2 mb-6">
-                                Add team members to collaborate on your logistics operations.
-                            </p>
-                            <Button variant="outline" onClick={() => setIsAddDialogOpen(true)}>
-                                Add Your First Member
-                            </Button>
-                        </CardContent>
-                    </Card>
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <Users className="h-12 w-12 text-muted-foreground mb-4" />
+                        <h3 className="text-lg font-medium mb-2">No team members yet</h3>
+                        <p className="text-muted-foreground mb-4">
+                            Get started by adding your first team member
+                        </p>
+                        <Button onClick={() => setIsAddDialogOpen(true)}>
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Add Member
+                        </Button>
+                    </div>
                 ) : (
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                         {members.map((member) => (
-                            <Card key={member.id} className="group hover:border-primary/50 transition-all">
-                                <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-                                    <div className="rounded-full bg-primary/10 p-2">
-                                        <Users className="h-4 w-4 text-primary" />
-                                    </div>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="text-muted-foreground hover:text-red-500 -mt-1 -mr-2"
-                                        onClick={() => handleDeleteClick(member.id)}
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                        {member.memberEmail ? (
-                                            <a
-                                                href={`https://mail.google.com/mail/?view=cm&fs=1&to=${member.memberEmail}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="font-medium truncate hover:text-primary underline cursor-pointer"
-                                                title={`Send email to ${member.memberEmail}`}
-                                            >
-                                                {member.memberEmail}
-                                            </a>
-                                        ) : (
-                                            <span className="font-medium truncate text-muted-foreground">
-                                                No email provided
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                        {member.memberMobile ? (
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-medium truncate">{member.memberMobile}</span>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-6 w-6 text-green-600 hover:text-green-700 hover:bg-green-50"
-                                                    onClick={() => window.open(`https://web.whatsapp.com/send?phone=${member.memberMobile}`, '_blank')}
-                                                    title="Open WhatsApp Web"
-                                                >
-                                                    <Send className="h-3 w-3" />
-                                                </Button>
+                            <Card key={member.id} className="hover:shadow-md transition-shadow">
+                                <CardHeader className="pb-3">
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                                                <span className="text-primary font-semibold">
+                                                    {member.memberEmail.charAt(0).toUpperCase()}
+                                                </span>
                                             </div>
-                                        ) : (
-                                            <span className="font-medium truncate text-muted-foreground">
-                                                No mobile provided
-                                            </span>
-                                        )}
+                                            <div>
+                                                <p className="font-medium">{member.memberEmail}</p>
+                                                {member.memberMobile ? (
+                                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                                        <Phone className="h-3 w-3" />
+                                                        <span>{member.memberMobile}</span>
+                                                    </div>
+                                                ) : (
+                                                    <span className="font-medium truncate text-muted-foreground">
+                                                        No mobile provided
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="text-muted-foreground hover:text-destructive"
+                                            onClick={() => handleDeleteClick(member.id)}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
                                     </div>
                                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                         <Shield className="h-3 w-3" />
                                         <span>Active Member</span>
                                     </div>
-                                </CardContent>
+                                </CardHeader>
                             </Card>
                         ))}
                     </div>
                 )}
             </div>
 
-            {user?.mpinHash && (
-                <MPINVerify
-                    open={showMPINVerify}
-                    onClose={() => setShowMPINVerify(false)}
-                    mpinHash={user.mpinHash}
-                    onSuccess={onMPINVerified}
-                    title={actionType === "add" ? "Verify to Add Member" : "Verify to Remove Member"}
-                    description="Enter your MPIN to confirm this action"
-                />
-            )}
+            <MPINVerify
+                open={showMPINVerify}
+                onClose={() => {
+                    setShowMPINVerify(false);
+                    setActionType("add");
+                    setMemberToDelete(null);
+                }}
+                onSuccess={onMPINVerified}
+                title={actionType === "add" ? "Verify to Add Member" : "Verify to Remove Member"}
+                description="Enter your MPIN to confirm this action"
+            />
         </div>
     );
 }

@@ -35,11 +35,11 @@ export default function PaymentRequestsPage() {
             const requestsData = querySnapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
-            })) as PaymentRequest[];
+            } as PaymentRequest));
             setRequests(requestsData);
         } catch (error) {
-            console.error("Error fetching requests:", error);
-            toast.error("Failed to fetch payment requests");
+            console.error("Error fetching payment requests:", error);
+            toast.error("Failed to load payment requests");
         } finally {
             setLoading(false);
         }
@@ -50,123 +50,133 @@ export default function PaymentRequestsPage() {
         setShowMPINVerify(true);
     };
 
-    const executeAction = async () => {
-        if (!selectedAction || !user) return;
-
-        setProcessingId(selectedAction.id);
+    const executeAction = async (pin: string) => {
+        // In the new approach, we just proceed with the action
+        if (!selectedAction) return;
+        
+        const { id, type } = selectedAction;
+        setProcessingId(id);
+        
         try {
-            const requestRef = doc(db, "paymentRequests", selectedAction.id);
-            const request = requests.find(r => r.id === selectedAction.id);
-
-            if (selectedAction.type === "approve") {
-                if (request) {
-                    // Activate user subscription
-                    await activateSubscription(request.userId);
-
-                    // Update request status
-                    await updateDoc(requestRef, {
-                        status: "approved",
-                        processedDate: serverTimestamp(),
-                        processedBy: user.email
-                    });
-                    toast.success("Payment approved & subscription activated");
-                }
-            } else if (selectedAction.type === "reject") {
-                await updateDoc(requestRef, {
-                    status: "rejected",
+            if (type === "delete") {
+                await deleteDoc(doc(db, "paymentRequests", id));
+                toast.success("Payment request deleted");
+            } else {
+                const updates: any = {
+                    status: type === "approve" ? "approved" : "rejected",
                     processedDate: serverTimestamp(),
-                    processedBy: user.email
-                });
-                toast.success("Payment request rejected");
-            } else if (selectedAction.type === "delete") {
-                await deleteDoc(requestRef);
-                toast.success("Request deleted");
+                    processedBy: user?.uid
+                };
+
+                if (type === "approve") {
+                    // Get the request to get the userId
+                    const requestDoc = await getDocs(query(collection(db, "paymentRequests")));
+                    const request = requestDoc.docs.find(d => d.id === id);
+                    if (request) {
+                        const requestData = request.data() as PaymentRequest;
+                        // Activate the user's subscription
+                        await activateSubscription(requestData.userId);
+                    }
+                }
+
+                await updateDoc(doc(db, "paymentRequests", id), updates);
+                toast.success(`Payment request ${type}d`);
             }
 
+            // Refresh the list
             fetchRequests();
         } catch (error) {
-            console.error("Error processing request:", error);
-            toast.error("Failed to process request");
+            console.error(`Error ${type}ing payment request:`, error);
+            toast.error(`Failed to ${type} payment request`);
         } finally {
             setProcessingId(null);
+            setShowMPINVerify(false);
             setSelectedAction(null);
         }
     };
 
+    if (loading) {
+        return (
+            <AdminGuard>
+                <div className="flex items-center justify-center min-h-[60vh]">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                </div>
+            </AdminGuard>
+        );
+    }
+
     return (
         <AdminGuard>
             <div className="container mx-auto py-8 px-4">
-                <h1 className="text-3xl font-bold tracking-tight mb-8">Payment Requests</h1>
+                <div className="mb-8">
+                    <h1 className="text-3xl font-bold tracking-tight">Payment Requests</h1>
+                    <p className="text-muted-foreground mt-2">
+                        Review and manage subscription payment requests
+                    </p>
+                </div>
 
-                <div className="grid gap-4">
-                    {loading ? (
-                        <div className="flex justify-center p-8">
-                            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                        </div>
-                    ) : requests.length === 0 ? (
+                <div className="space-y-4">
+                    {requests.length === 0 ? (
                         <Card>
-                            <CardContent className="p-8 text-center text-muted-foreground">
-                                No payment requests found.
+                            <CardContent className="py-12 text-center">
+                                <p className="text-muted-foreground">No pending payment requests</p>
                             </CardContent>
                         </Card>
                     ) : (
                         requests.map((request) => (
-                            <Card key={request.id} className="overflow-hidden">
-                                <div className="flex flex-col md:flex-row items-start md:items-center justify-between p-6 gap-4">
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <h3 className="font-semibold text-lg">{request.userName}</h3>
-                                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${request.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                                request.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                                                    'bg-yellow-100 text-yellow-800'
-                                                }`}>
-                                                {request.status.toUpperCase()}
-                                            </span>
+                            <Card key={request.id}>
+                                <div className="p-6">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                        <div>
+                                            <h3 className="font-medium">{request.userName}</h3>
+                                            <p className="text-sm text-muted-foreground">{request.userEmail}</p>
+                                            <p className="text-lg font-bold mt-2">₹{request.amount}</p>
+                                            <p className="text-sm text-muted-foreground capitalize">
+                                                Status: <span className="font-medium">{request.status}</span>
+                                            </p>
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                Requested: {request.requestDate.toDate().toLocaleString()}
+                                            </p>
+                                            {request.processedDate && (
+                                                <p className="text-xs text-muted-foreground">
+                                                    Processed: {request.processedDate.toDate().toLocaleString()}
+                                                </p>
+                                            )}
                                         </div>
-                                        <p className="text-sm text-muted-foreground">{request.userEmail}</p>
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            Requested: {request.requestDate?.toDate().toLocaleDateString()}
-                                        </p>
-                                    </div>
-
-                                    <div className="flex items-center gap-4">
-                                        <div className="text-right mr-4">
-                                            <p className="text-2xl font-bold">SR {request.amount}</p>
-                                            <p className="text-xs text-muted-foreground">4 Months</p>
-                                        </div>
-
                                         {request.status === "pending" && (
                                             <div className="flex gap-2">
                                                 <Button
                                                     size="sm"
-                                                    className="bg-green-600 hover:bg-green-700"
                                                     onClick={() => handleAction(request.id, "approve")}
                                                     disabled={!!processingId}
                                                 >
-                                                    <Check className="h-4 w-4 mr-1" />
+                                                    <Check className="h-4 w-4 mr-2" />
                                                     Approve
                                                 </Button>
                                                 <Button
                                                     size="sm"
-                                                    variant="destructive"
+                                                    variant="outline"
                                                     onClick={() => handleAction(request.id, "reject")}
                                                     disabled={!!processingId}
                                                 >
-                                                    <X className="h-4 w-4 mr-1" />
+                                                    <X className="h-4 w-4 mr-2" />
                                                     Reject
                                                 </Button>
                                             </div>
                                         )}
-
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            className="text-muted-foreground hover:text-red-500"
-                                            onClick={() => handleAction(request.id, "delete")}
-                                            disabled={!!processingId}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                        {request.status !== "pending" && (
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    className="text-muted-foreground hover:text-red-500"
+                                                    onClick={() => handleAction(request.id, "delete")}
+                                                    disabled={!!processingId}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </Card>
@@ -174,16 +184,16 @@ export default function PaymentRequestsPage() {
                     )}
                 </div>
 
-                {user?.mpinHash && (
-                    <MPINVerify
-                        open={showMPINVerify}
-                        onClose={() => setShowMPINVerify(false)}
-                        mpinHash={user.mpinHash}
-                        onSuccess={executeAction}
-                        title={`Confirm ${selectedAction?.type}`}
-                        description="Enter MPIN to confirm this action"
-                    />
-                )}
+                <MPINVerify
+                    open={showMPINVerify}
+                    onClose={() => {
+                        setShowMPINVerify(false);
+                        setSelectedAction(null);
+                    }}
+                    onSuccess={executeAction}
+                    title={`Confirm ${selectedAction?.type}`}
+                    description="Enter MPIN to confirm this action"
+                />
             </div>
         </AdminGuard>
     );

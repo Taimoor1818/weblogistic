@@ -3,123 +3,137 @@
 import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { hashMPIN, hashMPINSHA256 } from "@/lib/encryption";
-import { updateUserDocument } from "@/lib/subscription";
+import { toast } from "react-hot-toast";
+import { KeyRound, Check } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, setDoc } from "firebase/firestore";
-import { toast } from "react-hot-toast";
-import { Lock } from "lucide-react";
+import { hashMPINSHA256 } from "@/lib/encryption";
 
 interface MPINSetupProps {
     open: boolean;
     onClose: () => void;
     userId: string;
+    userEmail: string;
     onSuccess?: () => void;
     required?: boolean;
     hasMPIN?: boolean;
 }
 
-export function MPINSetup({ open, onClose, userId, onSuccess, required = false, hasMPIN = false }: MPINSetupProps) {
-    const [firstPin, setFirstPin] = useState("");
+export function MPINSetup({ open, onClose, userId, userEmail, onSuccess, required = false, hasMPIN = false }: MPINSetupProps) {
+    const [step, setStep] = useState(1); // 1: enter MPIN, 2: confirm MPIN, 3: success
+    const [pin, setPin] = useState("");
     const [confirmPin, setConfirmPin] = useState("");
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(false);
-    const firstPinRefs = useRef<Array<HTMLInputElement | null>>([]);
+    const [error, setError] = useState("");
+    const pinRefs = useRef<Array<HTMLInputElement | null>>([]);
     const confirmPinRefs = useRef<Array<HTMLInputElement | null>>([]);
 
-    // Handle first PIN input
-    const handleFirstPinChange = (value: string, index: number) => {
-        const newPin = firstPin.substring(0, index) + value.slice(-1) + firstPin.substring(index + 1);
-        setFirstPin(newPin);
-        if (value && index < 3) {
-            firstPinRefs.current[index + 1]?.focus();
-        }
-    };
-
-    // Handle confirm PIN input
-    const handleConfirmPinChange = (value: string, index: number) => {
-        const newPin = confirmPin.substring(0, index) + value.slice(-1) + confirmPin.substring(index + 1);
-        setConfirmPin(newPin);
-        if (value && index < 3) {
-            confirmPinRefs.current[index + 1]?.focus();
-        }
-    };
-
-    // Auto-submit when both PINs are entered and match
+    // Reset form when dialog opens
     useEffect(() => {
-        if (firstPin.length === 4 && confirmPin.length === 4) {
-            if (firstPin === confirmPin) {
-                handleSubmit();
-            } else {
-                setError(true);
+        if (open) {
+            setStep(1);
+            setPin("");
+            setConfirmPin("");
+            setError("");
+        }
+    }, [open]);
+
+    const handlePinChange = (value: string, index: number, isConfirm = false) => {
+        if (isConfirm) {
+            const newPin = confirmPin.substring(0, index) + value.slice(-1) + confirmPin.substring(index + 1);
+            setConfirmPin(newPin);
+            if (value && index < 3) {
+                confirmPinRefs.current[index + 1]?.focus();
             }
         } else {
-            setError(false);
+            const newPin = pin.substring(0, index) + value.slice(-1) + pin.substring(index + 1);
+            setPin(newPin);
+            if (value && index < 3) {
+                pinRefs.current[index + 1]?.focus();
+            }
         }
-    }, [firstPin, confirmPin]);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent, index: number, isConfirm = false) => {
+        const currentPin = isConfirm ? confirmPin : pin;
+        const refs = isConfirm ? confirmPinRefs : pinRefs;
+        
+        if (e.key === "Backspace" && !currentPin[index] && index > 0) {
+            refs.current[index - 1]?.focus();
+        }
+    };
 
     const handleSubmit = async () => {
-        if (firstPin !== confirmPin) {
-            setError(true);
-            toast.error("MPINs do not match. Please try again.");
+        if (pin.length !== 4) {
+            setError("Please enter a 4-digit MPIN");
             return;
         }
 
-        setLoading(true);
-        try {
-            // Hash MPIN with bcrypt for backward compatibility
-            const mpinHash = await hashMPIN(firstPin);
-            
-            // Hash MPIN with SHA-256 for new mpin_records collection
-            const sha256Hash = await hashMPINSHA256(firstPin);
-            
-            // Update user document with bcrypt hash (backward compatibility)
-            await updateUserDocument(userId, { mpinHash });
-            
-            // Store SHA-256 hash in new mpin_records collection
-            const mpinRecordRef = doc(db, "mpin_records", userId);
-            await setDoc(mpinRecordRef, {
-                hashedMPIN: sha256Hash,
-                createdAt: new Date(),
-                updatedAt: new Date()
-            });
+        if (!/^\d{4}$/.test(pin)) {
+            setError("MPIN must contain only digits");
+            return;
+        }
 
-            toast.success("MPIN set successfully!");
-            onSuccess?.();
-            onClose();
+        if (step === 1) {
+            setStep(2);
+            setTimeout(() => {
+                confirmPinRefs.current[0]?.focus();
+            }, 100);
+        } else if (step === 2) {
+            if (pin !== confirmPin) {
+                setError("MPINs do not match");
+                setConfirmPin("");
+                setTimeout(() => {
+                    confirmPinRefs.current[0]?.focus();
+                }, 100);
+                return;
+            }
 
-            // Reset state
-            setFirstPin("");
-            setConfirmPin("");
-        } catch (error) {
-            console.error("Error setting MPIN:", error);
-            toast.error("Failed to set MPIN. Please try again.");
-        } finally {
-            setLoading(false);
+            // Save MPIN
+            setLoading(true);
+            setError("");
+            
+            try {
+                // Hash the MPIN using SHA-256
+                const hashedMPIN = await hashMPINSHA256(pin);
+                
+                // Store in mpin_records collection with userId as document ID
+                const mpinRecordRef = doc(db, "mpin_records", userId);
+                await setDoc(mpinRecordRef, {
+                    userId,
+                    userEmail,
+                    hashedMPIN,
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                });
+
+                setStep(3);
+                if (onSuccess) onSuccess();
+                toast.success(hasMPIN ? "MPIN updated successfully!" : "MPIN set successfully!");
+            } catch (err: any) {
+                console.error("Error setting MPIN:", err);
+                setError(err.message || "Failed to set MPIN. Please try again.");
+                toast.error("Failed to set MPIN. Please try again.");
+            } finally {
+                setLoading(false);
+            }
         }
     };
+
+    // Auto-submit when confirm PIN is complete
+    useEffect(() => {
+        if (step === 2 && confirmPin.length === 4) {
+            const timer = setTimeout(() => {
+                handleSubmit();
+            }, 300);
+            return () => clearTimeout(timer);
+        }
+    }, [confirmPin, step]);
 
     const handleClose = () => {
-        // If MPIN setup is required and user doesn't have an MPIN yet, 
-        // only allow closing if they haven't started entering the PIN
-        if (required && !hasMPIN && (firstPin || confirmPin)) {
-            toast.error("Please complete MPIN setup or reset to cancel");
-            return;
-        }
-        
         if (!loading) {
-            setFirstPin("");
-            setConfirmPin("");
-            setError(false);
             onClose();
         }
-    };
-
-    const handleReset = () => {
-        setFirstPin("");
-        setConfirmPin("");
-        setError(false);
-        firstPinRefs.current[0]?.focus();
     };
 
     return (
@@ -127,46 +141,56 @@ export function MPINSetup({ open, onClose, userId, onSuccess, required = false, 
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                        <Lock className="h-6 w-6 text-primary" />
+                        <KeyRound className="h-6 w-6 text-primary" />
                     </div>
-                    <DialogTitle className="text-center">Set Your MPIN</DialogTitle>
+                    <DialogTitle className="text-center">
+                        {hasMPIN ? "Change MPIN" : "Set Up MPIN"}
+                    </DialogTitle>
                     <DialogDescription className="text-center">
-                        Enter a 4-digit PIN for secure access
+                        {step === 1 
+                            ? "Create a 4-digit PIN for quick access" 
+                            : step === 2 
+                                ? "Confirm your 4-digit PIN" 
+                                : "MPIN setup complete!"}
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-6 py-4">
-                    {/* First PIN Input */}
-                    <div>
-                        <p className="text-sm font-medium mb-2">Enter MPIN</p>
+                {step === 1 && (
+                    <div className="py-6">
+                        <p className="text-sm font-medium mb-3 text-center">Enter a 4-digit PIN</p>
                         <div className="flex gap-3 justify-center">
                             {[0, 1, 2, 3].map((index) => (
                                 <input
                                     key={index}
-                                    ref={(el) => { firstPinRefs.current[index] = el; }}
+                                    ref={(el) => { pinRefs.current[index] = el; }}
                                     type="password"
                                     maxLength={1}
-                                    value={firstPin[index] || ""}
+                                    value={pin[index] || ""}
                                     onChange={(e) => {
-                                        handleFirstPinChange(e.target.value, index);
+                                        handlePinChange(e.target.value, index);
                                     }}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Backspace" && !firstPin[index] && index > 0) {
-                                            firstPinRefs.current[index - 1]?.focus();
-                                        }
-                                    }}
-                                    className={`w-12 h-12 text-center text-xl font-bold rounded-lg border-2 ${
-                                        error ? "border-destructive" : "border-border"
-                                    } focus:border-primary focus:outline-none`}
+                                    onKeyDown={(e) => handleKeyDown(e, index)}
+                                    className="w-12 h-12 text-center text-xl font-bold rounded-lg border-2 border-border focus:border-primary focus:outline-none"
                                     disabled={loading}
                                 />
                             ))}
                         </div>
+                        {pin.length > 0 && pin.length < 4 && (
+                            <p className="text-xs text-center text-muted-foreground mt-2">
+                                Enter all 4 digits
+                            </p>
+                        )}
+                        {error && (
+                            <p className="text-xs text-center text-destructive mt-2">
+                                {error}
+                            </p>
+                        )}
                     </div>
+                )}
 
-                    {/* Confirm PIN Input */}
-                    <div>
-                        <p className="text-sm font-medium mb-2">Confirm MPIN</p>
+                {step === 2 && (
+                    <div className="py-6">
+                        <p className="text-sm font-medium mb-3 text-center">Confirm your 4-digit PIN</p>
                         <div className="flex gap-3 justify-center">
                             {[0, 1, 2, 3].map((index) => (
                                 <input
@@ -176,52 +200,72 @@ export function MPINSetup({ open, onClose, userId, onSuccess, required = false, 
                                     maxLength={1}
                                     value={confirmPin[index] || ""}
                                     onChange={(e) => {
-                                        handleConfirmPinChange(e.target.value, index);
+                                        handlePinChange(e.target.value, index, true);
                                     }}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Backspace" && !confirmPin[index] && index > 0) {
-                                            confirmPinRefs.current[index - 1]?.focus();
-                                        }
-                                    }}
-                                    className={`w-12 h-12 text-center text-xl font-bold rounded-lg border-2 ${
-                                        error ? "border-destructive" : "border-border"
-                                    } focus:border-primary focus:outline-none`}
+                                    onKeyDown={(e) => handleKeyDown(e, index, true)}
+                                    className="w-12 h-12 text-center text-xl font-bold rounded-lg border-2 border-border focus:border-primary focus:outline-none"
                                     disabled={loading}
                                 />
                             ))}
                         </div>
+                        {confirmPin.length > 0 && confirmPin.length < 4 && (
+                            <p className="text-xs text-center text-muted-foreground mt-2">
+                                Enter all 4 digits
+                            </p>
+                        )}
+                        {error && (
+                            <p className="text-xs text-center text-destructive mt-2">
+                                {error}
+                            </p>
+                        )}
                     </div>
+                )}
 
-                    {error && (
-                        <p className="text-xs text-center text-destructive">
-                            MPINs do not match. Please try again.
+                {step === 3 && (
+                    <div className="py-8 text-center">
+                        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 mb-4">
+                            <Check className="h-8 w-8 text-green-600" />
+                        </div>
+                        <p className="text-lg font-medium">
+                            {hasMPIN ? "MPIN Updated!" : "MPIN Set Successfully!"}
                         </p>
-                    )}
+                        <p className="text-sm text-muted-foreground mt-1">
+                            You can now use your MPIN to login quickly
+                        </p>
+                    </div>
+                )}
 
-                    <p className="text-xs text-center text-muted-foreground">
-                        You&apos;ll need this MPIN for sensitive operations like editing and deleting data
-                    </p>
-                </div>
+                {step < 3 && (
+                    <div className="flex gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={handleClose}
+                            disabled={loading}
+                            className="flex-1"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleSubmit}
+                            disabled={loading || (step === 1 ? pin.length < 4 : confirmPin.length < 4)}
+                            className="flex-1"
+                        >
+                            {loading ? (
+                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                            ) : step === 1 ? (
+                                "Continue"
+                            ) : (
+                                "Confirm"
+                            )}
+                        </Button>
+                    </div>
+                )}
 
-                {/* Action Buttons */}
-                <div className="flex gap-2">
-                    <Button
-                        variant="outline"
-                        onClick={handleClose}
-                        disabled={loading}
-                        className="flex-1"
-                    >
-                        Cancel
+                {step === 3 && (
+                    <Button onClick={handleClose} className="w-full">
+                        Done
                     </Button>
-                    <Button
-                        variant="ghost"
-                        onClick={handleReset}
-                        disabled={loading}
-                        className="flex-1"
-                    >
-                        Reset
-                    </Button>
-                </div>
+                )}
             </DialogContent>
         </Dialog>
     );
