@@ -1,14 +1,12 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { Card, CardContent } from "@/components/ui/card";
-
-const LiveMap = dynamic(() => import("@/components/map/LiveMap"), {
-    ssr: false,
-    loading: () => <div className="h-[600px] w-full bg-muted animate-pulse rounded-lg" />,
-});
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function MapPage() {
+    // Replace with your actual Google Maps Embed API URL
+    // Format: https://www.google.com/maps/embed/v1/place?key=YOUR_API_KEY&q=LOCATION
+    const googleMapsEmbedUrl = "https://www.google.com/maps/embed/v1/place?key=YOUR_GOOGLE_MAPS_API_KEY&q=New+York,NY";
+
     return (
         <div className="space-y-8 h-[calc(100vh-8rem)]">
             <div className="flex items-center justify-between">
@@ -21,8 +19,20 @@ export default function MapPage() {
             </div>
 
             <Card className="h-full border-none shadow-none bg-transparent">
+                <CardHeader>
+                    <CardTitle>Fleet Tracking</CardTitle>
+                </CardHeader>
                 <CardContent className="h-full p-0">
-                    <LiveMap />
+                    <div className="h-full w-full rounded-lg overflow-hidden">
+                        <iframe
+                            width="100%"
+                            height="100%"
+                            style={{ border: 0 }}
+                            loading="lazy"
+                            src={googleMapsEmbedUrl}
+                            allowFullScreen
+                        ></iframe>
+                    </div>
                 </CardContent>
             </Card>
         </div>

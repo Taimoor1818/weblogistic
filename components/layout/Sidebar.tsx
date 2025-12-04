@@ -12,7 +12,8 @@ import {
     Package,
     FileText,
     CreditCard,
-    Briefcase
+    Briefcase,
+    Map
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -45,6 +46,12 @@ export function Sidebar() {
             href: "/dashboard",
             icon: LayoutDashboard,
             color: "text-blue-500"
+        },
+        {
+            title: "Map",
+            href: "/dashboard/map",
+            icon: Map,
+            color: "text-cyan-500"
         },
         {
             title: "Drivers",

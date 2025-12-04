@@ -461,7 +461,7 @@ export default function PaymentsPage() {
                     onChange={(e) => setNewPayment({...newPayment, type: e.target.value as any})}
                   >
                     <option value="trip">Trip Payment</option>
-                    <option value="salary">Driver Salary</option>
+                    <option value="salary">Salary</option>
                     <option value="expense">Expense</option>
                     <option value="fuel">Fuel Usage</option>
                     <option value="other">Other</option>
@@ -565,7 +565,7 @@ export default function PaymentsPage() {
                     <div className="flex justify-between mb-1">
                       <span className="text-sm font-medium flex items-center gap-2">
                         <User className="h-4 w-4 text-blue-500" />
-                        Driver Salaries
+                        Salaries
                       </span>
                       <span className="text-sm text-muted-foreground">
                         ${payments.filter((p: any) => p.type === 'salary' && p.status === 'paid').reduce((sum: number, p: any) => sum + p.amount, 0).toFixed(2)}
@@ -727,11 +727,12 @@ export default function PaymentsPage() {
                   onChange={(e) => setEditForm({...editForm, type: e.target.value as any})}
                 >
                   <option value="trip">Trip Payment</option>
-                  <option value="salary">Driver Salary</option>
+                  <option value="salary">Salary</option>
                   <option value="expense">Expense</option>
                   <option value="fuel">Fuel Usage</option>
                   <option value="other">Other</option>
                 </select>
+
               </div>
               
               {/* Conditional employee dropdown for salary payments in edit form */}
