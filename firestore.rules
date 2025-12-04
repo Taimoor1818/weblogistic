@@ -35,13 +35,6 @@ service cloud.firestore {
       allow read, write: if isAuthenticated() && isOwner(userId);
     }
     
-    // Allow unauthenticated read access to users collection for MPIN verification
-    // This allows querying users by email during MPIN login flow
-    match /users/{userId} {
-      allow get: if request.query.email == resource.data.email && request.query.email != null;
-      allow list: if false; // Prevent listing all users
-    }
-    
     // Payment requests - users can create and read their own, admin can manage all
     match /paymentRequests/{requestId} {
       allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());

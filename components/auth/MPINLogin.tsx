@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { db } from "@/lib/firebase";
-import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { KeyRound, ArrowLeft } from "lucide-react";
@@ -22,6 +22,7 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: { open: boolean; 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(false);
     const [email, setEmail] = useState("");
+    const [uid, setUid] = useState("");
     const [pin, setPin] = useState("");
     const pinRefs = useRef<Array<HTMLInputElement | null>>([]);
     const router = useRouter();
@@ -30,8 +31,12 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: { open: boolean; 
     useEffect(() => {
         // Check if user has logged in before with MPIN
         const savedEmail = localStorage.getItem("last_login_email");
+        const savedUid = localStorage.getItem("last_login_uid");
         if (savedEmail) {
             setEmail(savedEmail);
+        }
+        if (savedUid) {
+            setUid(savedUid);
         }
     }, []);
 
@@ -66,8 +71,8 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: { open: boolean; 
     }, [pin]);
 
     const handlePinComplete = async () => {
-        if (!email) {
-            toast.error("Email not found. Please login with Google first.");
+        if (!email || !uid) {
+            toast.error("User session not found. Please login with Google first.");
             return;
         }
 
@@ -78,21 +83,6 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: { open: boolean; 
             // Hash the entered MPIN
             const hashedEnteredMPIN = await hashMPIN(pin);
             
-            // Query Firestore: users collection by email → Get UID
-            const usersRef = collection(db, "users");
-            const q = query(usersRef, where("email", "==", email));
-            const querySnapshot = await getDocs(q);
-
-            if (querySnapshot.empty) {
-                toast.error("No account found with this email. Please login with Google first.");
-                setLoading(false);
-                return;
-            }
-
-            const userDoc = querySnapshot.docs[0];
-            const userData = userDoc.data();
-            const uid = userDoc.id;
-
             // Query Firestore: mpin_records/{UID} → Get stored hash
             const mpinRecordRef = doc(db, "mpin_records", uid);
             const mpinRecordSnap = await getDoc(mpinRecordRef);
