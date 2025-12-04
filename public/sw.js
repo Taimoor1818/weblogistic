@@ -1,5 +1,5 @@
 // Service Worker for PWA functionality
-const CACHE_NAME = 'weblogistic-v1';
+const CACHE_NAME = 'weblogistic-v2';
 const urlsToCache = [
   '/',
   '/dashboard',
@@ -19,6 +19,7 @@ self.addEventListener('install', (event) => {
         console.log('Opened cache');
         return cache.addAll(urlsToCache);
       })
+      .then(() => self.skipWaiting()) // Force the new SW to become active immediately
   );
 });
 
