@@ -47,8 +47,23 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
+## Security Best Practices
+
+This project follows security best practices to protect sensitive information:
+
+1. **Environment Variables**: All sensitive configuration is stored in environment variables, never hardcoded
+2. **Git Ignore**: Sensitive files like `.env.local` are excluded from version control
+3. **Public vs Private Variables**: 
+   - Public variables (prefixed with `NEXT_PUBLIC_`) are available to the client-side code
+   - Private variables (without the prefix) are only available server-side
+4. **Regular Audits**: Periodically review code for accidentally committed secrets
+
 ## Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+**Important for Deployment**:
+- Set your environment variables in the Vercel dashboard, not in committed files
+- Never expose Firebase private keys or other secrets in client-side code
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
