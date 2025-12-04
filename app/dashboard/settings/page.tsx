@@ -5,17 +5,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { updateUserDocument } from "@/lib/subscription";
 import { MPINSetup } from "@/components/auth/MPINSetup";
 import { MPINVerify } from "@/components/auth/MPINVerify";
 import { toast } from "react-hot-toast";
-import { Building2, MapPin, Phone, KeyRound, User, Save, Edit2 } from "lucide-react";
+import { Building2, MapPin, Phone, KeyRound, User, Save, Edit2, Moon, Sun } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { useStore } from "@/store/useStore";
+import { useTheme } from "next-themes";
 
 export default function SettingsPage() {
     const { user, loading: authLoading } = useAuth();
+    const { settings, updateSettings } = useStore();
+    const { theme, setTheme } = useTheme();
     const [isEditing, setIsEditing] = useState(false);
     const [loading, setLoading] = useState(false);
     const [showMPINSetup, setShowMPINSetup] = useState(false);
@@ -87,6 +92,21 @@ export default function SettingsPage() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleCurrencyChange = async (value: string) => {
+        try {
+            await updateSettings({ ...settings, currency: value });
+            toast.success("Currency updated successfully!");
+        } catch (error) {
+            console.error("Error updating currency:", error);
+            toast.error("Failed to update currency. Please try again.");
+        }
+    };
+
+    const handleThemeChange = (value: string) => {
+        setTheme(value);
+        toast.success(`Theme changed to ${value} mode!`);
     };
 
     if (authLoading) {
@@ -249,6 +269,52 @@ export default function SettingsPage() {
                                 </Button>
                             </div>
                         )}
+                    </CardContent>
+                </Card>
+
+                {/* Appearance Settings */}
+                <Card className="border-2 hover:border-primary/50 transition-colors">
+                    <CardHeader>
+                        <div className="flex items-center gap-2">
+                            <Sun className="h-5 w-5 text-primary" />
+                            <CardTitle>Appearance</CardTitle>
+                        </div>
+                        <CardDescription>Customize the look and feel of the application</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="theme" className="flex items-center gap-2">
+                                <Moon className="h-4 w-4 text-muted-foreground" />
+                                Theme
+                            </Label>
+                            <Select value={theme || "system"} onValueChange={handleThemeChange}>
+                                <SelectTrigger id="theme">
+                                    <SelectValue placeholder="Select theme" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="light">Light</SelectItem>
+                                    <SelectItem value="dark">Dark</SelectItem>
+                                    <SelectItem value="system">System</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="currency" className="flex items-center gap-2">
+                                <span className="text-muted-foreground">$</span>
+                                Currency
+                            </Label>
+                            <Select value={settings.currency} onValueChange={handleCurrencyChange}>
+                                <SelectTrigger id="currency">
+                                    <SelectValue placeholder="Select currency" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="USD">USD ($)</SelectItem>
+                                    <SelectItem value="PKR">PKR (₨)</SelectItem>
+                                    <SelectItem value="SAR">SAR (SR)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </CardContent>
                 </Card>
 

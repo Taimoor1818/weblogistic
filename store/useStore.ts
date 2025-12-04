@@ -38,6 +38,9 @@ interface StoreState extends AppData {
     addEmployee: (employee: Omit<Employee, 'id'>) => Promise<void>;
     updateEmployee: (employee: Employee) => Promise<void>;
     deleteEmployee: (employeeId: string) => Promise<void>;
+    
+    // Add this new function declaration
+    updateSettings: (settings: Partial<AppData['settings']>) => Promise<void>;
 }
 
 const initialState: AppData = {
@@ -367,9 +370,22 @@ export const useStore = create<StoreState>((set, get) => ({
     
     addPayment: async (payment) => {
         const { profile } = get();
-        if (!profile) {
-            toast.error('User not authenticated');
-            return;
+        if (!profile || !profile.uid) {
+            // Fallback to auth user if profile is not loaded yet
+            const auth = getAuth();
+            if (!auth.currentUser) {
+                toast.error('User not authenticated');
+                return;
+            }
+            try {
+                await addDoc(collection(db, 'users', auth.currentUser.uid, 'payments'), payment);
+                toast.success('Payment added');
+                return; // Return early on success
+            } catch (error) {
+                console.error(error);
+                toast.error('Failed to add payment');
+                return; // Return early on error
+            }
         }
         
         try {
@@ -383,8 +399,21 @@ export const useStore = create<StoreState>((set, get) => ({
 
     updatePayment: async (payment) => {
         const { profile } = get();
-        if (!profile) {
-            toast.error('User not authenticated');
+        if (!profile || !profile.uid) {
+            // Fallback to auth user if profile is not loaded yet
+            const auth = getAuth();
+            if (!auth.currentUser) {
+                toast.error('User not authenticated');
+                return;
+            }
+            try {
+                const { id, ...data } = payment;
+                await updateDoc(doc(db, 'users', auth.currentUser.uid, 'payments', id), data);
+                toast.success('Payment updated');
+            } catch (error) {
+                console.error(error);
+                toast.error('Failed to update payment');
+            }
             return;
         }
         
@@ -400,8 +429,20 @@ export const useStore = create<StoreState>((set, get) => ({
 
     deletePayment: async (paymentId) => {
         const { profile } = get();
-        if (!profile) {
-            toast.error('User not authenticated');
+        if (!profile || !profile.uid) {
+            // Fallback to auth user if profile is not loaded yet
+            const auth = getAuth();
+            if (!auth.currentUser) {
+                toast.error('User not authenticated');
+                return;
+            }
+            try {
+                await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'payments', paymentId));
+                toast.success('Payment deleted');
+            } catch (error) {
+                console.error(error);
+                toast.error('Failed to delete payment');
+            }
             return;
         }
         
@@ -460,6 +501,26 @@ export const useStore = create<StoreState>((set, get) => ({
         } catch (error) {
             console.error(error);
             toast.error('Failed to delete employee');
+        }
+    },
+    
+    // Add this new function implementation
+    updateSettings: async (newSettings) => {
+        const { profile } = get();
+        if (!profile) {
+            toast.error('User not authenticated');
+            return;
+        }
+        
+        try {
+            const userDocRef = doc(db, 'users', profile.uid);
+            await updateDoc(userDocRef, {
+                settings: newSettings
+            });
+            toast.success('Settings updated');
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to update settings');
         }
     },
 }));

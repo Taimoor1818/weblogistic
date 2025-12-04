@@ -1,48 +1,53 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { useStore } from "@/store/useStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "react-hot-toast";
-import {
-  PlusCircle,
-  Edit3,
-  Trash2,
-  DollarSign,
+import { 
+  PlusCircle, 
+  Edit3, 
+  Trash2, 
+  DollarSign, 
   Calendar,
-  TrendingUp,
-  TrendingDown,
-  Wallet,
-  FileText,
+  User,
   Download,
-  CheckCircle,
-  Clock
+  TrendingUp,
+  Wallet,
+  CreditCard
 } from "lucide-react";
 import { exportToExcel } from "@/lib/export";
 import { MPINVerify } from "@/components/auth/MPINVerify";
 import { useAuth } from "@/hooks/useAuth";
+import { getCurrencySymbol } from "@/lib/currency";
+
+interface Payment {
+  id: string;
+  type: 'trip' | 'salary' | 'expense' | 'fuel' | 'other';
+  amount: number;
+  description: string;
+  date: string;
+  status: 'paid' | 'pending' | 'overdue' | 'received';
+  employeeId?: string;
+}
 
 export default function PaymentsPage() {
-  const router = useRouter();
   const { user } = useAuth();
-  const { payments, employees, addPayment, updatePayment, deletePayment } = useStore();
-  const [activeTab, setActiveTab] = useState("overview");
+  const { trips, drivers, vehicles, payments, employees, addPayment, updatePayment, deletePayment, profile, settings } = useStore();
+  const [activeTab, setActiveTab] = useState<'overview' | 'payments' | 'reports'>('overview');
   const [editingPayment, setEditingPayment] = useState<any>(null);
   const [deletePaymentId, setDeletePaymentId] = useState<string | null>(null);
   const [showMpinDialog, setShowMpinDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [mpinAction, setMpinAction] = useState<'edit' | 'delete' | null>(null);
-
   const [editForm, setEditForm] = useState({
     type: 'other' as 'trip' | 'salary' | 'expense' | 'fuel' | 'other',
     amount: '',
@@ -50,7 +55,6 @@ export default function PaymentsPage() {
     date: '',
     employeeId: ''
   });
-
   const [newPayment, setNewPayment] = useState({
     type: 'other' as 'trip' | 'salary' | 'expense' | 'fuel' | 'other',
     amount: '',
@@ -58,78 +62,45 @@ export default function PaymentsPage() {
     date: new Date().toISOString().split('T')[0],
     employeeId: ''
   });
-
+  
+  // Export date range state
   const [exportStartDate, setExportStartDate] = useState('');
   const [exportEndDate, setExportEndDate] = useState('');
 
-  // Calculate metrics
-  const metrics = useMemo(() => {
-    const totalRevenue = payments
-      .filter((p: any) => p.type === 'trip' && p.status === 'received')
+  // Calculate payment statistics
+  const paymentStats = useMemo(() => {
+    const issuedPayments = payments.filter((p: any) => p.status === 'paid');
+    const receivedPayments = payments.filter((p: any) => p.status === 'received');
+    
+    // Total revenue from received trip payments
+    const totalRevenue = receivedPayments
+      .filter((p: any) => p.type === 'trip')
       .reduce((sum: number, p: any) => sum + p.amount, 0);
-
-    const totalExpense = payments
-      .filter((p: any) => ['salary', 'expense', 'fuel', 'other'].includes(p.type) && p.status === 'paid')
+    
+    // Total expenses from paid non-trip payments
+    const totalExpenses = issuedPayments
+      .filter((p: any) => p.type !== 'trip')
       .reduce((sum: number, p: any) => sum + p.amount, 0);
-
-    const netProfit = totalRevenue - totalExpense;
-
-    const issuedPaymentsCount = payments.filter((p: any) => p.status === 'pending').length;
-
-    return { totalRevenue, totalExpense, netProfit, issuedPaymentsCount };
-  }, [payments]);
-
-  // Calculate report data
-  const reportData = useMemo(() => {
-    const tripRevenue = payments
-      .filter((p: any) => p.type === 'trip' && p.status === 'received')
-      .reduce((sum: number, p: any) => sum + p.amount, 0);
-
-    const salaryExpense = payments
-      .filter((p: any) => p.type === 'salary' && p.status === 'paid')
-      .reduce((sum: number, p: any) => sum + p.amount, 0);
-
-    const generalExpense = payments
-      .filter((p: any) => p.type === 'expense' && p.status === 'paid')
-      .reduce((sum: number, p: any) => sum + p.amount, 0);
-
-    const fuelExpense = payments
-      .filter((p: any) => p.type === 'fuel' && p.status === 'paid')
-      .reduce((sum: number, p: any) => sum + p.amount, 0);
-
-    const otherExpense = payments
-      .filter((p: any) => p.type === 'other' && p.status === 'paid')
-      .reduce((sum: number, p: any) => sum + p.amount, 0);
-
-    const totalExpenses = salaryExpense + generalExpense + fuelExpense + otherExpense;
-
+    
+    // Net profit
+    const netProfit = totalRevenue - totalExpenses;
+    
     return {
-      tripRevenue,
-      expenses: [
-        { name: 'Salary', amount: salaryExpense, percentage: totalExpenses > 0 ? (salaryExpense / totalExpenses) * 100 : 0 },
-        { name: 'Expense', amount: generalExpense, percentage: totalExpenses > 0 ? (generalExpense / totalExpenses) * 100 : 0 },
-        { name: 'Fuel', amount: fuelExpense, percentage: totalExpenses > 0 ? (fuelExpense / totalExpenses) * 100 : 0 },
-        { name: 'Other', amount: otherExpense, percentage: totalExpenses > 0 ? (otherExpense / totalExpenses) * 100 : 0 }
-      ],
-      totalExpenses
+      issuedCount: issuedPayments.length,
+      totalRevenue,
+      totalExpenses,
+      netProfit
     };
   }, [payments]);
 
-  const handleAddPayment = async () => {
-    // Validation
-    if (!newPayment.amount || parseFloat(newPayment.amount) <= 0) {
-      toast.error("Please enter a valid amount greater than 0");
-      return;
-    }
-    if (!newPayment.description.trim()) {
-      toast.error("Please enter a description");
-      return;
-    }
-    if (newPayment.type === 'salary' && !newPayment.employeeId) {
-      toast.error("Please select an employee for salary payment");
-      return;
-    }
+  // Get recent payments (last 5)
+  const recentPayments = useMemo(() => {
+    return [...payments]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 5);
+  }, [payments]);
 
+  const handleAddPayment = async () => {
     await addPayment({
       type: newPayment.type,
       amount: parseFloat(newPayment.amount),
@@ -138,7 +109,6 @@ export default function PaymentsPage() {
       status: 'pending',
       employeeId: newPayment.employeeId || undefined
     });
-
     setNewPayment({
       type: 'other',
       amount: '',
@@ -147,7 +117,6 @@ export default function PaymentsPage() {
       employeeId: ''
     });
     setShowAddDialog(false);
-    toast.success("Payment added successfully");
   };
 
   const handleIssuePayment = async (paymentId: string) => {
@@ -157,18 +126,18 @@ export default function PaymentsPage() {
         ...paymentToUpdate,
         status: 'paid'
       });
-      toast.success("Payment status changed to Paid");
+      toast.success("Payment marked as issued");
     }
   };
 
   const handleCompletePayment = async (paymentId: string) => {
     const paymentToUpdate = payments.find((p: any) => p.id === paymentId);
-    if (paymentToUpdate && paymentToUpdate.type === 'trip') {
+    if (paymentToUpdate) {
       await updatePayment({
         ...paymentToUpdate,
         status: 'received'
       });
-      toast.success("Payment status changed to Received");
+      toast.success("Payment marked as received");
     }
   };
 
@@ -204,19 +173,6 @@ export default function PaymentsPage() {
   };
 
   const handleEditSubmit = async () => {
-    if (!editForm.amount || parseFloat(editForm.amount) <= 0) {
-      toast.error("Please enter a valid amount greater than 0");
-      return;
-    }
-    if (!editForm.description.trim()) {
-      toast.error("Please enter a description");
-      return;
-    }
-    if (editForm.type === 'salary' && !editForm.employeeId) {
-      toast.error("Please select an employee for salary payment");
-      return;
-    }
-
     if (editingPayment) {
       await updatePayment({
         ...editingPayment,
@@ -227,11 +183,31 @@ export default function PaymentsPage() {
         employeeId: editForm.employeeId || undefined
       });
       setShowEditDialog(false);
-      setEditingPayment(null);
       toast.success("Payment updated successfully");
     }
   };
 
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'trip': return 'bg-blue-100 text-blue-800';
+      case 'salary': return 'bg-green-100 text-green-800';
+      case 'expense': return 'bg-red-100 text-red-800';
+      case 'fuel': return 'bg-orange-100 text-orange-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'paid': return 'bg-green-100 text-green-800';
+      case 'received': return 'bg-blue-100 text-blue-800';
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'overdue': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Export payments to Excel
   const handleExport = () => {
     if (!exportStartDate || !exportEndDate) {
       toast.error("Please select both start and end dates");
@@ -257,35 +233,48 @@ export default function PaymentsPage() {
       Description: payment.description,
       Amount: payment.amount,
       Status: payment.status,
-      Employee: payment.employeeId ? (employees.find((e: any) => e.id === payment.employeeId)?.name || 'N/A') : 'N/A'
+      Employee: payment.employeeId ? employees.find((e: any) => e.id === payment.employeeId)?.name || 'Unknown' : 'N/A'
     }));
 
     exportToExcel(
-      exportData,
+      exportData, 
       `payments_${exportStartDate}_to_${exportEndDate}`,
       "Payments",
-      "WebLogistic Payments Report"
+      "WebLojistic Payments Report"
     );
   };
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'trip': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
-      case 'salary': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-      case 'expense': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-      case 'fuel': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
-    }
-  };
+  // Calculate progress data for reports
+  const revenueData = useMemo(() => {
+    const tripPayments = payments.filter((p: any) => p.type === 'trip' && p.status === 'received');
+    const totalAmount = tripPayments.reduce((sum: number, p: any) => sum + p.amount, 0);
+    
+    return {
+      totalAmount,
+      count: tripPayments.length
+    };
+  }, [payments]);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'paid': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-      case 'received': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
-      case 'pending': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
-    }
-  };
+  const expenseData = useMemo(() => {
+    const expensePayments = payments.filter((p: any) => p.type !== 'trip' && p.status === 'paid');
+    const totalAmount = expensePayments.reduce((sum: number, p: any) => sum + p.amount, 0);
+    
+    // Group by type
+    const byType: Record<string, { count: number; amount: number }> = {};
+    expensePayments.forEach((p: any) => {
+      if (!byType[p.type]) {
+        byType[p.type] = { count: 0, amount: 0 };
+      }
+      byType[p.type].count += 1;
+      byType[p.type].amount += p.amount;
+    });
+    
+    return {
+      totalAmount,
+      count: expensePayments.length,
+      byType
+    };
+  }, [payments]);
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -294,7 +283,7 @@ export default function PaymentsPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Payment Management</h1>
             <p className="text-muted-foreground mt-2">
-              Track revenue, expenses, and financial transactions
+              Manage financial transactions, track revenue and expenses
             </p>
           </div>
           <Button onClick={() => setShowAddDialog(true)}>
@@ -304,74 +293,189 @@ export default function PaymentsPage() {
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 max-w-md">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="payments">Payments</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
-        </TabsList>
+      {/* Tabs */}
+      <div className="flex space-x-4 mb-6 border-b">
+        <Button
+          variant={activeTab === 'overview' ? 'default' : 'ghost'}
+          onClick={() => setActiveTab('overview')}
+          className="px-4"
+        >
+          Overview
+        </Button>
+        <Button
+          variant={activeTab === 'payments' ? 'default' : 'ghost'}
+          onClick={() => setActiveTab('payments')}
+          className="px-4"
+        >
+          Payments
+        </Button>
+        <Button
+          variant={activeTab === 'reports' ? 'default' : 'ghost'}
+          onClick={() => setActiveTab('reports')}
+          className="px-4"
+        >
+          Reports
+        </Button>
+      </div>
 
-        {/* OVERVIEW TAB */}
-        <TabsContent value="overview" className="space-y-6">
-          {/* Metrics Cards */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Overview Tab */}
+      {activeTab === 'overview' && (
+        <div className="space-y-6">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Issue Payments</CardTitle>
+                <CreditCard className="h-4 w-4 text-blue-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{paymentStats.issuedCount}</div>
+                <p className="text-xs text-muted-foreground">Payments issued</p>
+              </CardContent>
+            </Card>
+            
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-                <TrendingUp className="h-4 w-4 text-green-600" />
+                <TrendingUp className="h-4 w-4 text-green-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-600">₹{metrics.totalRevenue.toFixed(2)}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  From completed trips
-                </p>
+                <div className="text-2xl font-bold">{getCurrencySymbol(settings.currency)}{paymentStats.totalRevenue.toFixed(2)}</div>
+                <p className="text-xs text-muted-foreground">From trip payments</p>
               </CardContent>
             </Card>
-
+            
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Expense</CardTitle>
-                <TrendingDown className="h-4 w-4 text-red-600" />
+                <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
+                <Wallet className="h-4 w-4 text-red-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-red-600">₹{metrics.totalExpense.toFixed(2)}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Salary, fuel & other expenses
-                </p>
+                <div className="text-2xl font-bold">{getCurrencySymbol(settings.currency)}{paymentStats.totalExpenses.toFixed(2)}</div>
+                <p className="text-xs text-muted-foreground">Salaries & expenses</p>
               </CardContent>
             </Card>
-
+            
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Net Profit</CardTitle>
-                <Wallet className="h-4 w-4 text-blue-600" />
+                <DollarSign className="h-4 w-4 text-purple-500" />
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold ${metrics.netProfit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                  ₹{metrics.netProfit.toFixed(2)}
+                <div className={`text-2xl font-bold ${paymentStats.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {getCurrencySymbol(settings.currency)}{paymentStats.netProfit.toFixed(2)}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Revenue - Expense
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Issued Payments</CardTitle>
-                <Clock className="h-4 w-4 text-yellow-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-yellow-600">{metrics.issuedPaymentsCount}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Pending payments
-                </p>
+                <p className="text-xs text-muted-foreground">Revenue - Expenses</p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Export Section */}
+          {/* Recent Payments */}
           <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5" />
+                Recent Payments
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {payments.length === 0 ? (
+                <div className="text-center py-8">
+                  <DollarSign className="mx-auto h-12 w-12 text-muted-foreground" />
+                  <h3 className="mt-4 text-lg font-medium">No payments recorded</h3>
+                  <p className="mt-1 text-muted-foreground">
+                    Get started by adding your first payment.
+                  </p>
+                  <div className="mt-6">
+                    <Button onClick={() => setShowAddDialog(true)}>
+                      <PlusCircle className="h-4 w-4 mr-2" />
+                      Add Payment
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {recentPayments.map((payment: any) => (
+                    <div key={payment.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                      <div className="flex-1">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <Badge className={getTypeColor(payment.type)}>
+                            {payment.type.charAt(0).toUpperCase() + payment.type.slice(1)}
+                          </Badge>
+                          <Badge className={getStatusColor(payment.status)}>
+                            {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                          </Badge>
+                        </div>
+                        <h3 className="font-medium">{payment.description}</h3>
+                        <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-4 w-4" />
+                            <span>{new Date(payment.date).toLocaleDateString()}</span>
+                          </div>
+                          {payment.employeeId && (
+                            <div className="flex items-center gap-1">
+                              <User className="h-4 w-4" />
+                              <span>
+                                {employees.find((e: any) => e.id === payment.employeeId)?.name || 'Unknown Employee'}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-right mr-4">
+                          <p className="font-bold text-lg">{getCurrencySymbol(settings.currency)}{payment.amount.toFixed(2)}</p>
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          {payment.status === 'pending' && (
+                            <Button 
+                              size="sm" 
+                              onClick={() => handleIssuePayment(payment.id)}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              Issue
+                            </Button>
+                          )}
+                          {payment.status === 'paid' && payment.type === 'trip' && (
+                            <Button 
+                              size="sm" 
+                              onClick={() => handleCompletePayment(payment.id)}
+                              className="bg-blue-600 hover:bg-blue-700"
+                            >
+                              Complete
+                            </Button>
+                          )}
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => handleEditClick(payment)}
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => handleDeleteClick(payment.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Payments Tab */}
+      {activeTab === 'payments' && (
+        <div className="space-y-6">
+          {/* Export Section */}
+          <Card className="mb-6">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Download className="h-5 w-5" />
@@ -412,7 +516,7 @@ export default function PaymentsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
+                <DollarSign className="h-5 w-5" />
                 All Payments
               </CardTitle>
             </CardHeader>
@@ -424,9 +528,15 @@ export default function PaymentsPage() {
                   <p className="mt-1 text-muted-foreground">
                     Get started by adding your first payment.
                   </p>
+                  <div className="mt-6">
+                    <Button onClick={() => setShowAddDialog(true)}>
+                      <PlusCircle className="h-4 w-4 mr-2" />
+                      Add Payment
+                    </Button>
+                  </div>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {payments.map((payment: any) => (
                     <div key={payment.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
                       <div className="flex-1">
@@ -445,54 +555,48 @@ export default function PaymentsPage() {
                             <span>{new Date(payment.date).toLocaleDateString()}</span>
                           </div>
                           {payment.employeeId && (
-                            <span>
-                              Employee: {employees.find((e: any) => e.id === payment.employeeId)?.name || 'Unknown'}
-                            </span>
+                            <div className="flex items-center gap-1">
+                              <User className="h-4 w-4" />
+                              <span>
+                                {employees.find((e: any) => e.id === payment.employeeId)?.name || 'Unknown Employee'}
+                              </span>
+                            </div>
                           )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="text-right mr-4">
-                          <p className="font-bold text-lg">₹{payment.amount.toFixed(2)}</p>
+                          <p className="font-bold text-lg">{getCurrencySymbol(settings.currency)}{payment.amount.toFixed(2)}</p>
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                          {payment.status === 'pending' && payment.type !== 'trip' && (
-                            <Button
-                              size="sm"
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          {payment.status === 'pending' && (
+                            <Button 
+                              size="sm" 
                               onClick={() => handleIssuePayment(payment.id)}
                               className="bg-green-600 hover:bg-green-700"
                             >
                               Issue
                             </Button>
                           )}
-                          {payment.status === 'pending' && payment.type === 'trip' && (
-                            <>
-                              <Button
-                                size="sm"
-                                onClick={() => handleIssuePayment(payment.id)}
-                                className="bg-green-600 hover:bg-green-700"
-                              >
-                                Issue
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                onClick={() => handleCompletePayment(payment.id)}
-                              >
-                                Complete
-                              </Button>
-                            </>
+                          {payment.status === 'paid' && payment.type === 'trip' && (
+                            <Button 
+                              size="sm" 
+                              onClick={() => handleCompletePayment(payment.id)}
+                              className="bg-blue-600 hover:bg-blue-700"
+                            >
+                              Complete
+                            </Button>
                           )}
-                          <Button
-                            size="sm"
-                            variant="outline"
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
                             onClick={() => handleEditClick(payment)}
                           >
                             <Edit3 className="h-4 w-4" />
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
                             className="text-destructive hover:text-destructive hover:bg-destructive/10"
                             onClick={() => handleDeleteClick(payment.id)}
                           >
@@ -506,170 +610,99 @@ export default function PaymentsPage() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
+      )}
 
-        {/* PAYMENTS TAB */}
-        <TabsContent value="payments" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5" />
-                Payment Records
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {payments.length === 0 ? (
-                <div className="text-center py-12">
-                  <DollarSign className="mx-auto h-12 w-12 text-muted-foreground" />
-                  <h3 className="mt-4 text-lg font-medium">No payments recorded</h3>
-                  <p className="mt-1 text-muted-foreground">
-                    Get started by adding your first payment.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {payments.map((payment: any) => (
-                    <div key={payment.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className="flex-1">
-                        <div className="flex flex-wrap items-center gap-2 mb-2">
-                          <Badge className={getTypeColor(payment.type)}>
-                            {payment.type.charAt(0).toUpperCase() + payment.type.slice(1)}
-                          </Badge>
-                          <Badge className={getStatusColor(payment.status)}>
-                            {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
-                          </Badge>
-                        </div>
-                        <h3 className="font-medium">{payment.description}</h3>
-                        <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4" />
-                            <span>{new Date(payment.date).toLocaleDateString()}</span>
-                          </div>
-                          {payment.employeeId && (
-                            <span>
-                              Employee: {employees.find((e: any) => e.id === payment.employeeId)?.name || 'Unknown'}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="text-right mr-4">
-                          <p className="font-bold text-lg">₹{payment.amount.toFixed(2)}</p>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {payment.status === 'pending' && payment.type !== 'trip' && (
-                            <Button
-                              size="sm"
-                              onClick={() => handleIssuePayment(payment.id)}
-                              className="bg-green-600 hover:bg-green-700"
-                            >
-                              Issue
-                            </Button>
-                          )}
-                          {payment.status === 'pending' && payment.type === 'trip' && (
-                            <>
-                              <Button
-                                size="sm"
-                                onClick={() => handleIssuePayment(payment.id)}
-                                className="bg-green-600 hover:bg-green-700"
-                              >
-                                Issue
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                onClick={() => handleCompletePayment(payment.id)}
-                              >
-                                Complete
-                              </Button>
-                            </>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleEditClick(payment)}
-                          >
-                            <Edit3 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => handleDeleteClick(payment.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* REPORTS TAB */}
-        <TabsContent value="reports" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Trip Revenue Card */}
+      {/* Reports Tab */}
+      {activeTab === 'reports' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Revenue Progress */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-green-600" />
+                  <TrendingUp className="h-5 w-5 text-green-500" />
                   Trip Revenue
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Total Revenue from Trips</span>
-                  <span className="text-2xl font-bold text-green-600">₹{reportData.tripRevenue.toFixed(2)}</span>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Revenue Progress</span>
-                    <span className="font-medium">
-                      {payments.filter((p: any) => p.type === 'trip' && p.status === 'received').length} completed trips
-                    </span>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Total Revenue</span>
+                      <span className="font-medium">{getCurrencySymbol(settings.currency)}{revenueData.totalAmount.toFixed(2)}</span>
+                    </div>
+                    <Progress value={100} className="h-2" />
                   </div>
-                  <Progress
-                    value={reportData.tripRevenue > 0 ? 100 : 0}
-                    className="h-2"
-                  />
+                  <div className="text-sm text-muted-foreground">
+                    <p>{revenueData.count} trip payments received</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Expenses Breakdown Card */}
+            {/* Expenses Progress */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <TrendingDown className="h-5 w-5 text-red-600" />
-                  Expenses Breakdown
+                  <Wallet className="h-5 w-5 text-red-500" />
+                  Expenses & Salaries
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-sm font-medium">Total Expenses</span>
-                  <span className="text-2xl font-bold text-red-600">₹{reportData.totalExpenses.toFixed(2)}</span>
-                </div>
-                {reportData.expenses.map((expense) => (
-                  <div key={expense.name} className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium">{expense.name}</span>
-                      <span className="text-muted-foreground">₹{expense.amount.toFixed(2)}</span>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Total Expenses</span>
+                      <span className="font-medium">{getCurrencySymbol(settings.currency)}{expenseData.totalAmount.toFixed(2)}</span>
                     </div>
-                    <Progress
-                      value={expense.percentage}
-                      className="h-2"
-                    />
+                    <Progress value={100} className="h-2" />
                   </div>
-                ))}
+                  <div className="text-sm text-muted-foreground">
+                    <p>{expenseData.count} expense payments issued</p>
+                    <div className="mt-2 space-y-1">
+                      {Object.entries(expenseData.byType).map(([type, data]) => (
+                        <div key={type} className="flex justify-between">
+                          <span className="capitalize">{type}:</span>
+                          <span>{data.count} payments ({getCurrencySymbol(settings.currency)}{data.amount.toFixed(2)})</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
-      </Tabs>
+
+          {/* Net Profit Summary */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-purple-500" />
+                Financial Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center p-4 bg-green-50 rounded-lg">
+                  <p className="text-sm text-green-700">Total Revenue</p>
+                  <p className="text-xl font-bold text-green-800">{getCurrencySymbol(settings.currency)}{paymentStats.totalRevenue.toFixed(2)}</p>
+                </div>
+                <div className="text-center p-4 bg-red-50 rounded-lg">
+                  <p className="text-sm text-red-700">Total Expenses</p>
+                  <p className="text-xl font-bold text-red-800">{getCurrencySymbol(settings.currency)}{paymentStats.totalExpenses.toFixed(2)}</p>
+                </div>
+                <div className={`text-center p-4 rounded-lg ${paymentStats.netProfit >= 0 ? 'bg-purple-50' : 'bg-orange-50'}`}>
+                  <p className="text-sm text-purple-700">Net Profit</p>
+                  <p className={`text-xl font-bold ${paymentStats.netProfit >= 0 ? 'text-purple-800' : 'text-orange-800'}`}>
+                    {getCurrencySymbol(settings.currency)}{paymentStats.netProfit.toFixed(2)}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* MPIN Verification Dialog */}
       {user && (
@@ -689,16 +722,19 @@ export default function PaymentsPage() {
 
       {/* Edit Payment Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Payment</DialogTitle>
+            <DialogDescription>
+              Update the payment details
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="edit-type">Type</Label>
               <Select
                 value={editForm.type}
-                onValueChange={(value: any) => setEditForm({ ...editForm, type: value })}
+                onValueChange={(value) => setEditForm({ ...editForm, type: value as any })}
               >
                 <SelectTrigger id="edit-type">
                   <SelectValue placeholder="Select type" />
@@ -712,25 +748,28 @@ export default function PaymentsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-amount">Amount</Label>
-              <Input
-                id="edit-amount"
-                type="number"
-                step="0.01"
-                min="0"
-                value={editForm.amount}
-                onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
-              />
-            </div>
+            
             <div className="grid gap-2">
               <Label htmlFor="edit-description">Description</Label>
               <Input
                 id="edit-description"
                 value={editForm.description}
                 onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                placeholder="Enter description"
               />
             </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="edit-amount">Amount ({getCurrencySymbol(settings.currency)})</Label>
+              <Input
+                id="edit-amount"
+                type="number"
+                value={editForm.amount}
+                onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
+                placeholder="Enter amount"
+              />
+            </div>
+            
             <div className="grid gap-2">
               <Label htmlFor="edit-date">Date</Label>
               <Input
@@ -740,7 +779,8 @@ export default function PaymentsPage() {
                 onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
               />
             </div>
-            {editForm.type === 'salary' && (
+            
+            {(editForm.type === 'salary') && (
               <div className="grid gap-2">
                 <Label htmlFor="edit-employee">Employee</Label>
                 <Select
@@ -751,6 +791,7 @@ export default function PaymentsPage() {
                     <SelectValue placeholder="Select employee" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="">None</SelectItem>
                     {employees.map((employee: any) => (
                       <SelectItem key={employee.id} value={employee.id}>
                         {employee.name}
@@ -760,6 +801,7 @@ export default function PaymentsPage() {
                 </Select>
               </div>
             )}
+            
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowEditDialog(false)}>
                 Cancel
@@ -774,16 +816,19 @@ export default function PaymentsPage() {
 
       {/* Add Payment Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add New Payment</DialogTitle>
+            <DialogTitle>Add Payment</DialogTitle>
+            <DialogDescription>
+              Add a new payment to your records
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="add-type">Type</Label>
               <Select
                 value={newPayment.type}
-                onValueChange={(value: any) => setNewPayment({ ...newPayment, type: value, employeeId: '' })}
+                onValueChange={(value) => setNewPayment({ ...newPayment, type: value as any })}
               >
                 <SelectTrigger id="add-type">
                   <SelectValue placeholder="Select type" />
@@ -797,25 +842,28 @@ export default function PaymentsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="add-amount">Amount</Label>
-              <Input
-                id="add-amount"
-                type="number"
-                step="0.01"
-                min="0"
-                value={newPayment.amount}
-                onChange={(e) => setNewPayment({ ...newPayment, amount: e.target.value })}
-              />
-            </div>
+            
             <div className="grid gap-2">
               <Label htmlFor="add-description">Description</Label>
               <Input
                 id="add-description"
                 value={newPayment.description}
                 onChange={(e) => setNewPayment({ ...newPayment, description: e.target.value })}
+                placeholder="Enter description"
               />
             </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="add-amount">Amount ({getCurrencySymbol(settings.currency)})</Label>
+              <Input
+                id="add-amount"
+                type="number"
+                value={newPayment.amount}
+                onChange={(e) => setNewPayment({ ...newPayment, amount: e.target.value })}
+                placeholder="Enter amount"
+              />
+            </div>
+            
             <div className="grid gap-2">
               <Label htmlFor="add-date">Date</Label>
               <Input
@@ -825,7 +873,8 @@ export default function PaymentsPage() {
                 onChange={(e) => setNewPayment({ ...newPayment, date: e.target.value })}
               />
             </div>
-            {newPayment.type === 'salary' && (
+            
+            {(newPayment.type === 'salary') && (
               <div className="grid gap-2">
                 <Label htmlFor="add-employee">Employee</Label>
                 <Select
@@ -836,6 +885,7 @@ export default function PaymentsPage() {
                     <SelectValue placeholder="Select employee" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="">None</SelectItem>
                     {employees.map((employee: any) => (
                       <SelectItem key={employee.id} value={employee.id}>
                         {employee.name}
@@ -849,7 +899,10 @@ export default function PaymentsPage() {
               <Button variant="outline" onClick={() => setShowAddDialog(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleAddPayment}>
+              <Button onClick={() => {
+                handleAddPayment();
+                setShowAddDialog(false);
+              }}>
                 Add Payment
               </Button>
             </div>
