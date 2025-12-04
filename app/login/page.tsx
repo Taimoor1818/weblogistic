@@ -1,19 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signInWithPopup } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { Truck, KeyRound } from "lucide-react";
+import { Truck, KeyRound, Download } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { MPINLogin } from "@/components/auth/MPINLogin";
 
 export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [showMPINLogin, setShowMPINLogin] = useState(false);
+    const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
     const router = useRouter();
+
+    // Check for PWA installation support
+    useEffect(() => {
+        const handleBeforeInstallPrompt = (e: Event) => {
+            // Prevent the mini-infobar from appearing on mobile
+            e.preventDefault();
+            // Stash the event so it can be triggered later
+            setDeferredPrompt(e);
+        };
+
+        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+        return () => {
+            window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        };
+    }, []);
 
     const handleLogin = async () => {
         setLoading(true);
@@ -42,6 +59,24 @@ export default function LoginPage() {
             }
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDownloadApp = async () => {
+        if (deferredPrompt) {
+            // Show the install prompt
+            deferredPrompt.prompt();
+            // Wait for the user to respond to the prompt
+            const { outcome } = await deferredPrompt.userChoice;
+            // We've used the prompt, and can't use it again, throw it away
+            setDeferredPrompt(null);
+            
+            if (outcome === 'accepted') {
+                toast.success("App installed successfully!");
+            }
+        } else {
+            // Fallback for browsers that don't support beforeinstallprompt
+            toast.success("To install this app, look for the install option in your browser's address bar or menu.");
         }
     };
 
@@ -135,6 +170,16 @@ export default function LoginPage() {
                     >
                         <KeyRound className="h-5 w-5 mr-2" />
                         Login with MPIN
+                    </Button>
+
+                    {/* Download PWA Button */}
+                    <Button
+                        variant="ghost"
+                        className="w-full py-6 text-lg font-medium transition-all hover:scale-[1.02] bg-white/10 text-white hover:bg-white/20 mt-4"
+                        onClick={handleDownloadApp}
+                    >
+                        <Download className="h-5 w-5 mr-2" />
+                        Install App
                     </Button>
 
                     <p className="text-center text-xs text-white/70">
