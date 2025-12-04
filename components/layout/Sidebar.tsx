@@ -12,8 +12,7 @@ import {
     Package,
     FileText,
     CreditCard,
-    Briefcase,
-    Map
+    Briefcase
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -46,12 +45,6 @@ export function Sidebar() {
             href: "/dashboard",
             icon: LayoutDashboard,
             color: "text-blue-500"
-        },
-        {
-            title: "Map",
-            href: "/dashboard/map",
-            icon: Map,
-            color: "text-cyan-500"
         },
         {
             title: "Drivers",
@@ -186,7 +179,7 @@ export function Sidebar() {
                         <div className="flex items-center gap-2">
                             <p className="truncate text-xs text-muted-foreground">{user?.companyName || "My Company"}</p>
                             {user?.subscriptionStatus && (
-                                <StatusBadge status={user.subscriptionStatus} showDot={false} className="scale-75 origin-left" />
+                                <StatusBadge status={user.subscriptionStatus} showDot={true} className="scale-75 origin-left" />
                             )}
                         </div>
                     </div>

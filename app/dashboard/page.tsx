@@ -90,7 +90,7 @@ export default function DashboardPage() {
 
             {/* Top 4 Widgets */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-                <Card>
+                <Card className="hover:border-primary/50 transition-all cursor-pointer" onClick={() => router.push('/dashboard/trips')}>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Shipments</CardTitle>
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-blue-500">
@@ -109,7 +109,7 @@ export default function DashboardPage() {
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="hover:border-primary/50 transition-all cursor-pointer" onClick={() => router.push('/dashboard/drivers')}>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Active Drivers</CardTitle>
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-green-500">
@@ -128,7 +128,7 @@ export default function DashboardPage() {
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="hover:border-primary/50 transition-all cursor-pointer" onClick={() => router.push('/dashboard/payments')}>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Pending Payments</CardTitle>
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-orange-500">
@@ -147,7 +147,7 @@ export default function DashboardPage() {
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="hover:border-primary/50 transition-all cursor-pointer" onClick={() => router.push('/dashboard/vehicles')}>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Active Vehicles</CardTitle>
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-purple-500">
@@ -163,28 +163,6 @@ export default function DashboardPage() {
                     <CardContent>
                         <div className="text-2xl font-bold">{activeVehicles}</div>
                         <p className="text-xs text-muted-foreground">Fleet status</p>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Map Section */}
-            <div className="mb-8">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Live Map</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                            <div className="text-center">
-                                <div className="text-lg font-medium mb-2">Google Maps Integration</div>
-                                <p className="text-sm text-muted-foreground mb-4">
-                                    Embed your live map here using Google Maps Embed API
-                                </p>
-                                <Button variant="outline" onClick={() => router.push('/dashboard/map')}>
-                                    View Full Map
-                                </Button>
-                            </div>
-                        </div>
                     </CardContent>
                 </Card>
             </div>

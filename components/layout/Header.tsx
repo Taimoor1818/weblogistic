@@ -33,7 +33,7 @@ export function Header() {
                 <div className="hidden sm:flex flex-col items-end">
                     <p className="text-sm font-medium truncate max-w-[150px]">{user?.email || "user@example.com"}</p>
                     {user?.subscriptionStatus && (
-                        <StatusBadge status={user.subscriptionStatus} showDot={false} className="scale-75 origin-right" />
+                        <StatusBadge status={user.subscriptionStatus} showDot={true} className="scale-75 origin-right" />
                     )}
                 </div>
                 <Button variant="ghost" size="icon">
