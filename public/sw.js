@@ -3,7 +3,12 @@ const CACHE_NAME = 'weblogistic-v1';
 const urlsToCache = [
   '/',
   '/dashboard',
-  '/login'
+  '/login',
+  '/dashboard/payments',
+  '/dashboard/drivers',
+  '/dashboard/vehicles',
+  '/dashboard/customers',
+  '/dashboard/trips'
 ];
 
 // Install event - cache essential assets
@@ -42,4 +47,10 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
+});
+
+// Handle PWA installation events
+self.addEventListener('appinstalled', (event) => {
+  console.log('PWA was installed successfully');
+  // You can send analytics or show a notification here
 });

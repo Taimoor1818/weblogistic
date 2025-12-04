@@ -14,6 +14,7 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [showMPINLogin, setShowMPINLogin] = useState(false);
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+    const [isIOS, setIsIOS] = useState(false);
     const router = useRouter();
 
     // Check for PWA installation support
@@ -24,6 +25,14 @@ export default function LoginPage() {
             // Stash the event so it can be triggered later
             setDeferredPrompt(e);
         };
+
+        // Check if user is on iOS Safari
+        const checkIOS = () => {
+            const userAgent = window.navigator.userAgent.toLowerCase();
+            return /iphone|ipad|ipod/.test(userAgent);
+        };
+
+        setIsIOS(checkIOS());
 
         window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
@@ -72,11 +81,17 @@ export default function LoginPage() {
             setDeferredPrompt(null);
             
             if (outcome === 'accepted') {
-                toast.success("App installed successfully!");
+                toast.success("App installation started! Check your desktop/mobile home screen for the shortcut.");
+            } else {
+                toast.success("Installation cancelled. You can try again later.");
             }
         } else {
-            // Fallback for browsers that don't support beforeinstallprompt
-            toast.success("To install this app, look for the install option in your browser's address bar or menu.");
+            // Instructions for browsers that don't support beforeinstallprompt
+            if (isIOS) {
+                toast.success("To install this app on iOS: Tap the Share button, then select 'Add to Home Screen'.");
+            } else {
+                toast.success("To install this app: Look for the install option in your browser's address bar or menu.");
+            }
         }
     };
 
