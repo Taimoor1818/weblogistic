@@ -32,6 +32,9 @@ export function Sidebar() {
     const handleLogout = async () => {
         try {
             await signOut(auth);
+            // Clear localStorage values related to MPIN login
+            localStorage.removeItem("last_login_email");
+            localStorage.removeItem("last_login_uid");
             router.push("/login");
             toast.success("Logged out successfully");
         } catch {

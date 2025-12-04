@@ -71,20 +71,9 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: { open: boolean; 
     }, [pin]);
 
     const handlePinComplete = async () => {
-        if (!email && !uid) {
-            toast.error("Please login with Google first to set up your MPIN.");
-            onSwitchToGoogle();
-            return;
-        }
-
-        if (!email) {
-            toast.error("Email not found. Please login with Google again.");
-            onSwitchToGoogle();
-            return;
-        }
-
-        if (!uid) {
-            toast.error("User ID not found. Please login with Google again.");
+        // If we don't have email or UID, prompt user to log in with Google first
+        if (!email || !uid) {
+            toast.error("Please login with Google first to set up or use your MPIN.");
             onSwitchToGoogle();
             return;
         }
