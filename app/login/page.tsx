@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { signInWithPopup } from "firebase/auth";
-import { auth, googleProvider } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { Truck, KeyRound, Download } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { MPINLogin } from "@/components/auth/MPINLogin";
+import { auth, googleProvider } from "@/lib/firebase";
 
 export default function LoginPage() {
     const [loading, setLoading] = useState(false);
@@ -101,14 +101,11 @@ export default function LoginPage() {
 
     return (
         <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900">
-            {/* Simplified background without video */}
-            <div className="absolute inset-0 z-0 bg-black/20" />
-
             <motion.div
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.2 }}
-                className="z-10 w-full max-w-md space-y-8 rounded-2xl p-8 backdrop-blur-2xl bg-white/5 border border-white/10 shadow-2xl"
+                className="z-10 w-full max-w-md space-y-8 rounded-2xl p-8 backdrop-blur-xl bg-black/20"
             >
                 <div className="flex flex-col items-center text-center">
                     <div className="mb-4 rounded-full bg-primary/10 p-4">
