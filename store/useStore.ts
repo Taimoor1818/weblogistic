@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { AppData, Driver, Vehicle, Customer, Trip, UserProfile, TeamMember, Payment } from '@/types';
+import { AppData, Driver, Vehicle, Customer, Trip, UserProfile, TeamMember, Payment, Employee } from '@/types';
 import { db } from '@/lib/firebase';
 import { doc, updateDoc, onSnapshot, collection, addDoc, deleteDoc, query, Unsubscribe } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
@@ -33,6 +33,10 @@ interface StoreState extends AppData {
     addPayment: (payment: Omit<Payment, 'id'>) => Promise<void>;
     updatePayment: (payment: Payment) => Promise<void>;
     deletePayment: (paymentId: string) => Promise<void>;
+    
+    addEmployee: (employee: Omit<Employee, 'id'>) => Promise<void>;
+    updateEmployee: (employee: Employee) => Promise<void>;
+    deleteEmployee: (employeeId: string) => Promise<void>;
 }
 
 const initialState: AppData = {
@@ -43,6 +47,7 @@ const initialState: AppData = {
     customers: [],
     trips: [],
     payments: [],
+    employees: [],
     settings: {
         currency: 'USD',
         notificationsEnabled: true,
@@ -134,6 +139,14 @@ export const useStore = create<StoreState>((set, get) => ({
                 set({ payments });
             });
             unsubscribers.push(paymentsUnsub);
+            
+            // Fetch employees from user's employees subcollection
+            const employeesQuery = query(collection(db, 'users', uid, 'employees'));
+            const employeesUnsub = onSnapshot(employeesQuery, (snapshot) => {
+                const employees = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
+                set({ employees });
+            });
+            unsubscribers.push(employeesUnsub);
 
             set({ unsubscribers, isLoading: false, initialized: true });
 
@@ -386,6 +399,55 @@ export const useStore = create<StoreState>((set, get) => ({
         } catch (error) {
             console.error(error);
             toast.error('Failed to delete payment');
+        }
+    },
+    
+    addEmployee: async (employee) => {
+        const { profile } = get();
+        if (!profile) {
+            toast.error('User not authenticated');
+            return;
+        }
+        
+        try {
+            await addDoc(collection(db, 'users', profile.uid, 'employees'), employee);
+            toast.success('Employee added');
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to add employee');
+        }
+    },
+
+    updateEmployee: async (employee) => {
+        const { profile } = get();
+        if (!profile) {
+            toast.error('User not authenticated');
+            return;
+        }
+        
+        try {
+            const { id, ...data } = employee;
+            await updateDoc(doc(db, 'users', profile.uid, 'employees', id), data);
+            toast.success('Employee updated');
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to update employee');
+        }
+    },
+
+    deleteEmployee: async (employeeId) => {
+        const { profile } = get();
+        if (!profile) {
+            toast.error('User not authenticated');
+            return;
+        }
+        
+        try {
+            await deleteDoc(doc(db, 'users', profile.uid, 'employees', employeeId));
+            toast.success('Employee deleted');
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to delete employee');
         }
     },
 }));

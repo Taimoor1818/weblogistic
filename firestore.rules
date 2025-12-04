@@ -71,6 +71,11 @@ service cloud.firestore {
     match /users/{userId}/payments/{paymentId} {
       allow read, create, update, delete: if isAuthenticated() && isOwner(userId);
     }
+    
+    // Employees - stored as subcollection of users
+    match /users/{userId}/employees/{employeeId} {
+      allow read, create, update, delete: if isAuthenticated() && isOwner(userId);
+    }
 
   }
 

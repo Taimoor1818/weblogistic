@@ -49,7 +49,7 @@ interface Payment {
 
 export default function PaymentsPage() {
   const router = useRouter();
-  const { trips, drivers, vehicles, payments, addPayment, updatePayment, deletePayment, profile } = useStore();
+  const { trips, drivers, vehicles, payments, employees, addPayment, updatePayment, deletePayment, profile } = useStore();
   const [editingPayment, setEditingPayment] = useState<any>(null);
   const [deletePaymentId, setDeletePaymentId] = useState<string | null>(null);
   const [mpin, setMpin] = useState('');
@@ -60,13 +60,15 @@ export default function PaymentsPage() {
     type: 'other' as 'trip' | 'salary' | 'expense' | 'fuel' | 'other',
     amount: '',
     description: '',
-    date: ''
+    date: '',
+    employeeId: '' // Add employeeId field
   });
   const [newPayment, setNewPayment] = useState({
     type: 'other' as 'trip' | 'salary' | 'expense' | 'other',
     amount: '',
     description: '',
     date: new Date().toISOString().split('T')[0],
+    employeeId: '' // Add employeeId field
   });
   
   // Export date range state
@@ -113,6 +115,7 @@ export default function PaymentsPage() {
       description: newPayment.description,
       date: newPayment.date,
       status: 'pending' as 'pending',
+      employeeId: newPayment.employeeId || undefined // Add employeeId if provided
     };
 
     await addPayment(payment);
@@ -121,6 +124,7 @@ export default function PaymentsPage() {
       amount: '',
       description: '',
       date: new Date().toISOString().split('T')[0],
+      employeeId: '' // Reset employeeId
     });
     
     toast.success("Payment added successfully");
@@ -166,7 +170,8 @@ export default function PaymentsPage() {
       type: payment.type,
       amount: payment.amount.toString(),
       description: payment.description,
-      date: payment.date
+      date: payment.date,
+      employeeId: payment.employeeId || '' // Add employeeId field
     });
     setMpinAction('edit');
     setShowMpinDialog(true);
@@ -204,7 +209,8 @@ export default function PaymentsPage() {
         type: editForm.type,
         amount: parseFloat(editForm.amount),
         description: editForm.description,
-        date: editForm.date
+        date: editForm.date,
+        employeeId: editForm.employeeId || undefined // Add employeeId if provided
       });
       setShowEditDialog(false);
       toast.success("Payment updated successfully");
@@ -262,29 +268,23 @@ export default function PaymentsPage() {
       RelatedID: payment.relatedId || ''
     }));
     
-    if (exportFormat === 'excel') {
-      // Export to Excel
-      exportToExcel(exportData, "Financial_Transactions", "Payments");
-    } else {
-      // For PDF, we'll implement a simple CSV-like export for now
-      // In a real implementation, you would use a PDF library like jsPDF
-      const csvContent = [
-        ['ID', 'Type', 'Description', 'Amount', 'Status', 'Date', 'Related ID'],
-        ...exportData.map(item => [
-          item.ID,
-          item.Type,
-          item.Description,
-          item.Amount,
-          item.Status,
-          item.Date,
-          item.RelatedID
-        ])
-      ].map(row => row.join(',')).join('\n');
-      
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      saveAs(blob, "Financial_Transactions.csv");
-      toast.success("Exported as CSV (PDF library not installed)");
-    }
+    // Define colors for different payment types
+    const typeColors = {
+      trip: 'FF4CAF50', // Green
+      salary: 'FF2196F3', // Blue
+      expense: 'FFFF9800', // Orange
+      fuel: 'FFF44336', // Red
+      other: 'FF9C27B0' // Purple
+    };
+    
+    // Export to Excel with enhanced features
+    exportToExcel(
+      exportData, 
+      "Financial_Transactions", 
+      "Payments",
+      profile?.companyName || "WebLogistic",
+      typeColors
+    );
   };
 
   return (
@@ -468,6 +468,26 @@ export default function PaymentsPage() {
                   </select>
                 </div>
                 
+                {/* Conditional employee dropdown for salary payments */}
+                {newPayment.type === 'salary' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="employeeId">Select Employee</Label>
+                    <select
+                      id="employeeId"
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      value={newPayment.employeeId}
+                      onChange={(e) => setNewPayment({...newPayment, employeeId: e.target.value})}
+                    >
+                      <option value="">Select an employee</option>
+                      {employees.map((employee: any) => (
+                        <option key={employee.id} value={employee.id}>
+                          {employee.name} - {employee.position}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                
                 <div className="space-y-2">
                   <Label htmlFor="amount">Amount ($)</Label>
                   <Input
@@ -618,7 +638,7 @@ export default function PaymentsPage() {
           <DialogHeader>
             <DialogTitle>Export Financial Data</DialogTitle>
             <DialogDescription>
-              Select date range and format for export
+              Select date range for export
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -643,33 +663,12 @@ export default function PaymentsPage() {
               </div>
             </div>
             
-            <div className="space-y-2">
-              <Label>Export Format</Label>
-              <div className="flex gap-2">
-                <Button
-                  variant={exportFormat === 'excel' ? 'default' : 'outline'}
-                  onClick={() => setExportFormat('excel')}
-                  className="flex-1"
-                >
-                  Excel
-                </Button>
-                <Button
-                  variant={exportFormat === 'pdf' ? 'default' : 'outline'}
-                  onClick={() => setExportFormat('pdf')}
-                  className="flex-1"
-                  disabled
-                >
-                  PDF (Coming Soon)
-                </Button>
-              </div>
-            </div>
-            
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowExportDialog(false)}>
                 Cancel
               </Button>
               <Button onClick={handleExport}>
-                Export
+                Export to Excel
               </Button>
             </div>
           </div>
@@ -734,6 +733,26 @@ export default function PaymentsPage() {
                   <option value="other">Other</option>
                 </select>
               </div>
+              
+              {/* Conditional employee dropdown for salary payments in edit form */}
+              {editForm.type === 'salary' && (
+                <div className="space-y-2">
+                  <Label htmlFor="edit-employeeId">Select Employee</Label>
+                  <select
+                    id="edit-employeeId"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={editForm.employeeId}
+                    onChange={(e) => setEditForm({...editForm, employeeId: e.target.value})}
+                  >
+                    <option value="">Select an employee</option>
+                    {employees.map((employee: any) => (
+                      <option key={employee.id} value={employee.id}>
+                        {employee.name} - {employee.position}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               
               <div className="space-y-2">
                 <Label htmlFor="edit-amount">Amount ($)</Label>

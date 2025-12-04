@@ -33,7 +33,7 @@ export function StatusBadge({ status, showDot = true, className }: StatusBadgePr
         trial: {
             label: "Trial",
             color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-            dotColor: "bg-blue-500",
+            dotColor: "bg-red-500 animate-pulse",
         },
     };
 

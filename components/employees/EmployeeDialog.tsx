@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Driver } from "@/types";
+import { Employee } from "@/types";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -17,36 +17,42 @@ import { useStore } from "@/store/useStore";
 import { toast } from "react-hot-toast";
 import { Plus } from "lucide-react";
 
-interface DriverDialogProps {
-    driver?: Driver;
+interface EmployeeDialogProps {
+    employee?: Employee;
     trigger?: React.ReactNode;
 }
 
-export function DriverDialog({ driver, trigger }: DriverDialogProps) {
+export function EmployeeDialog({ employee, trigger }: EmployeeDialogProps) {
     const [open, setOpen] = useState(false);
-    const { addDriver, updateDriver, profile } = useStore();
+    const { addEmployee, updateEmployee } = useStore();
 
-    const { register, handleSubmit, reset } = useForm<Driver>({
-        defaultValues: driver || {
-            status: "available",
+    const { register, handleSubmit, reset } = useForm<Employee>({
+        defaultValues: employee || {
+            position: "",
+            salaryType: "monthly",
+            salaryAmount: 0,
+            joinedDate: new Date().toISOString(),
+            name: "",
+            phone: ""
         },
     });
 
-    const onSubmit = async (data: Driver) => {
+    const onSubmit = async (data: Employee) => {
         try {
-            if (driver) {
-                await updateDriver({ ...driver, ...data });
+            if (employee) {
+                await updateEmployee({ ...employee, ...data });
             } else {
-                await addDriver({
+                await addEmployee({
                     ...data,
                     joinedDate: new Date().toISOString(),
-                    status: "available",
                 });
             }
             setOpen(false);
             reset();
+            toast.success(employee ? "Employee updated" : "Employee added");
         } catch (error) {
             console.error(error);
+            toast.error(employee ? "Failed to update employee" : "Failed to add employee");
         }
     };
 
@@ -56,13 +62,13 @@ export function DriverDialog({ driver, trigger }: DriverDialogProps) {
                 {trigger || (
                     <Button>
                         <Plus className="mr-2 h-4 w-4" />
-                        Add Driver
+                        Add Employee
                     </Button>
                 )}
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle>{driver ? "Edit Driver" : "Add New Driver"}</DialogTitle>
+                    <DialogTitle>{employee ? "Edit Employee" : "Add New Employee"}</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                     <div className="grid gap-2">
@@ -71,25 +77,13 @@ export function DriverDialog({ driver, trigger }: DriverDialogProps) {
                     </div>
 
                     <div className="grid gap-2">
+                        <Label htmlFor="position">Position</Label>
+                        <Input id="position" {...register("position", { required: true })} />
+                    </div>
+
+                    <div className="grid gap-2">
                         <Label htmlFor="phone">Phone</Label>
                         <Input id="phone" {...register("phone", { required: true })} />
-                    </div>
-
-                    <div className="grid gap-2">
-                        <Label htmlFor="licenseNumber">License Number</Label>
-                        <Input
-                            id="licenseNumber"
-                            {...register("licenseNumber", { required: true })}
-                        />
-                    </div>
-
-                    <div className="grid gap-2">
-                        <Label htmlFor="licenseExpiry">License Expiry</Label>
-                        <Input
-                            id="licenseExpiry"
-                            type="date"
-                            {...register("licenseExpiry", { required: true })}
-                        />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -115,7 +109,7 @@ export function DriverDialog({ driver, trigger }: DriverDialogProps) {
                     </div>
 
                     <Button type="submit" className="w-full">
-                        {driver ? "Update Driver" : "Add Driver"}
+                        {employee ? "Update Employee" : "Add Employee"}
                     </Button>
                 </form>
             </DialogContent>

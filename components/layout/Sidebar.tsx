@@ -7,7 +7,6 @@ import {
     LayoutDashboard,
     Users,
     Truck,
-    Map,
     Settings,
     LogOut,
     Package,
@@ -45,51 +44,61 @@ export function Sidebar() {
             title: "Dashboard",
             href: "/dashboard",
             icon: LayoutDashboard,
+            color: "text-blue-500"
         },
         {
             title: "Drivers",
             href: "/dashboard/drivers",
             icon: Users,
+            color: "text-green-500"
         },
         {
             title: "Vehicles",
             href: "/dashboard/vehicles",
             icon: Truck,
+            color: "text-purple-500"
         },
         {
             title: "Trips",
             href: "/dashboard/trips",
             icon: Package,
+            color: "text-orange-500"
         },
         {
             title: "Customers",
             href: "/dashboard/customers",
             icon: FileText,
-        },
-        {
-            title: "Live Map",
-            href: "/dashboard/map",
-            icon: Map,
+            color: "text-red-500"
         },
         {
             title: "Team",
             href: "/dashboard/team",
             icon: Briefcase,
+            color: "text-indigo-500"
+        },
+        {
+            title: "Employees",
+            href: "/dashboard/employees",
+            icon: Users,
+            color: "text-teal-500"
         },
         {
             title: "Settings",
             href: "/dashboard/settings",
             icon: Settings,
+            color: "text-gray-500"
         },
         {
-            title: "Subscription Payment",
+            title: "Subscription",
             href: "/dashboard/payment",
             icon: CreditCard,
+            color: "text-pink-500"
         },
         {
             title: "Payment Management",
             href: "/dashboard/payments",
             icon: CreditCard,
+            color: "text-yellow-500"
         },
     ];
 
@@ -98,16 +107,19 @@ export function Sidebar() {
             title: "Admin Dashboard",
             href: "/admin",
             icon: LayoutDashboard,
+            color: "text-blue-500"
         },
         {
             title: "Payment Requests",
             href: "/admin/payment-requests",
             icon: CreditCard,
+            color: "text-green-500"
         },
         {
             title: "All Users",
             href: "/dashboard/all-users",
             icon: Users,
+            color: "text-purple-500"
         },
     ];
 
@@ -130,7 +142,7 @@ export function Sidebar() {
                                 pathname === item.href ? "bg-accent text-accent-foreground" : "text-muted-foreground"
                             )}
                         >
-                            <item.icon className="h-4 w-4 text-blue-500" />
+                            <item.icon className={`h-4 w-4 ${item.color}`} />
                             {item.title}
                         </Link>
                     ))}
@@ -149,7 +161,7 @@ export function Sidebar() {
                                         pathname === item.href ? "bg-accent text-accent-foreground" : "text-muted-foreground"
                                     )}
                                 >
-                                    <item.icon className="h-4 w-4 text-blue-500" />
+                                    <item.icon className={`h-4 w-4 ${item.color}`} />
                                     {item.title}
                                 </Link>
                             ))}

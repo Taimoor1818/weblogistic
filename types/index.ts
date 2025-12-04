@@ -55,6 +55,17 @@ export interface Payment {
     date: string;
     status: 'paid' | 'pending' | 'overdue' | 'received';
     relatedId?: string; // Trip ID, Driver ID, etc.
+    employeeId?: string; // Employee ID for salary payments
+}
+
+export interface Employee {
+    id: string;
+    name: string;
+    position: string;
+    phone: string;
+    salaryType: 'per-trip' | 'monthly';
+    salaryAmount: number;
+    joinedDate: string;
 }
 
 export interface UserProfile {
@@ -86,6 +97,7 @@ export interface AppData {
     customers: Customer[];
     trips: Trip[];
     payments: Payment[];
+    employees: Employee[];
     settings: {
         currency: string;
         notificationsEnabled: boolean;

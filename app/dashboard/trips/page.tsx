@@ -19,7 +19,7 @@ import { DeliveryProof } from "@/components/trips/DeliveryProof";
 import { exportToExcel } from "@/lib/export";
 
 export default function TripsPage() {
-    const { trips, drivers, vehicles, customers, deleteTrip } = useStore();
+    const { trips, drivers, vehicles, customers, deleteTrip, profile } = useStore();
 
     const getDriver = (id: string) => drivers.find((d) => d.id === id);
     const getVehiclePlate = (id: string) => vehicles.find((v) => v.id === id)?.plateNumber || "Unknown";
@@ -40,7 +40,12 @@ export default function TripsPage() {
                 Date: format(new Date(t.createdAt), "yyyy-MM-dd HH:mm"),
             };
         });
-        exportToExcel(data, "Trips_Report", "Trips");
+        exportToExcel(
+            data, 
+            "Trips_Report", 
+            "Trips",
+            profile?.companyName || "WebLogistic"
+        );
     };
 
     return (
