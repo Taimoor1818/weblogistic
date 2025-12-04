@@ -17,8 +17,6 @@ export default function LoginPage() {
     const [isIOS, setIsIOS] = useState(false);
     const router = useRouter();
 
-
-
     // Check for PWA installation support
     useEffect(() => {
         const handleBeforeInstallPrompt = (e: Event) => {
@@ -102,22 +100,9 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-black">
-            {/* Video Background - Continuous Loop */}
-            <div className="absolute inset-0 z-0 overflow-hidden">
-                <video
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="w-full h-full object-cover brightness-[0.6]"
-                >
-                    <source src="/videos/video.mp4" type="video/mp4" />
-                    Your browser does not support the video tag.
-                </video>
-                {/* Adjusted overlay for better text readability and container visibility */}
-                <div className="absolute inset-0 bg-black/20" />
-            </div>
+        <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900">
+            {/* Simplified background without video */}
+            <div className="absolute inset-0 z-0 bg-black/20" />
 
             <motion.div
                 initial={{ y: 20, opacity: 0 }}

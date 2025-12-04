@@ -25,6 +25,9 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
     const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
     const handlePinChange = (value: string, index: number) => {
+        // Ensure we only accept numeric values
+        if (value && !/^\d$/.test(value)) return;
+        
         const newPin = pin.substring(0, index) + value.slice(-1) + pin.substring(index + 1);
         setPin(newPin);
         if (value && index < 3) {
@@ -59,6 +62,11 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
         setError(false);
 
         try {
+            // Check if crypto API is available
+            if (typeof window === 'undefined' || !window.crypto || !window.crypto.subtle) {
+                throw new Error("Crypto API not available in this environment");
+            }
+
             // Hash the entered MPIN using SHA-256
             const hashedEnteredMPIN = await hashMPINSHA256(pin);
             console.log("Attempting MPIN login with hash:", hashedEnteredMPIN);
@@ -70,21 +78,25 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
                 const storedUserId = localStorage.getItem('mpin_authenticated_user');
                 if (storedUserId) {
                     console.log("Found stored user ID:", storedUserId);
-                    // Try to fetch specific MPIN record
-                    const mpinRecordRef = doc(db, "mpin_records", storedUserId);
-                    const mpinRecordSnap = await getDoc(mpinRecordRef);
+                    try {
+                        // Try to fetch specific MPIN record
+                        const mpinRecordRef = doc(db, "mpin_records", storedUserId);
+                        const mpinRecordSnap = await getDoc(mpinRecordRef);
 
-                    if (mpinRecordSnap.exists()) {
-                        const data = mpinRecordSnap.data();
-                        console.log("Found MPIN record for stored user. Stored hash:", data.hashedMPIN);
-                        if (data.hashedMPIN === hashedEnteredMPIN) {
-                            userId = storedUserId;
-                            console.log("MPIN matched via stored ID");
+                        if (mpinRecordSnap.exists()) {
+                            const data = mpinRecordSnap.data();
+                            console.log("Found MPIN record for stored user. Stored hash:", data.hashedMPIN);
+                            if (data.hashedMPIN === hashedEnteredMPIN) {
+                                userId = storedUserId;
+                                console.log("MPIN matched via stored ID");
+                            } else {
+                                console.warn("MPIN mismatch for stored user ID");
+                            }
                         } else {
-                            console.warn("MPIN mismatch for stored user ID");
+                            console.warn("No MPIN record found for stored user ID");
                         }
-                    } else {
-                        console.warn("No MPIN record found for stored user ID");
+                    } catch (docError) {
+                        console.warn("Error fetching MPIN record for stored user ID:", docError);
                     }
                 }
             }
@@ -93,15 +105,33 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
                 console.log("Falling back to global query...");
                 // Fallback: Query Firestore: mpin_records collection to find matching record
                 // Search across the entire mpin_records collection for a document with matching hashedMPIN
-                const mpinRecordsRef = collection(db, "mpin_records");
-                const q = query(mpinRecordsRef, where("hashedMPIN", "==", hashedEnteredMPIN));
-                const querySnapshot = await getDocs(q);
+                try {
+                    const mpinRecordsRef = collection(db, "mpin_records");
+                    const q = query(mpinRecordsRef, where("hashedMPIN", "==", hashedEnteredMPIN));
+                    const querySnapshot = await getDocs(q);
 
-                console.log("Global query results:", querySnapshot.size);
+                    console.log("Global query results:", querySnapshot.size);
 
-                if (querySnapshot.empty) {
-                    console.error("No matching MPIN record found via global query");
-                    toast.error("Invalid MPIN. Please try again.");
+                    if (querySnapshot.empty) {
+                        console.error("No matching MPIN record found via global query");
+                        toast.error("Invalid MPIN. Please try again.");
+                        setError(true);
+                        setPin("");
+                        setTimeout(() => {
+                            pinRefs.current[0]?.focus();
+                        }, 100);
+                        setLoading(false);
+                        return;
+                    }
+
+                    // Get the user ID from the matching record
+                    const mpinRecordDoc = querySnapshot.docs[0];
+                    const mpinData = mpinRecordDoc.data();
+                    userId = mpinData.userId;
+                    console.log("Found user ID via global query:", userId);
+                } catch (queryError) {
+                    console.error("Error querying MPIN records:", queryError);
+                    toast.error("Authentication service unavailable. Please try again later.");
                     setError(true);
                     setPin("");
                     setTimeout(() => {
@@ -110,21 +140,27 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
                     setLoading(false);
                     return;
                 }
-
-                // Get the user ID from the matching record
-                const mpinRecordDoc = querySnapshot.docs[0];
-                const mpinData = mpinRecordDoc.data();
-                userId = mpinData.userId;
-                console.log("Found user ID via global query:", userId);
             }
 
             // Get user document to verify existence
-            const userDocRef = doc(db, "users", userId);
-            const userDocSnap = await getDoc(userDocRef);
+            try {
+                const userDocRef = doc(db, "users", userId);
+                const userDocSnap = await getDoc(userDocRef);
 
-            if (!userDocSnap.exists()) {
-                console.error("User document not found for ID:", userId);
-                toast.error("User account not found.");
+                if (!userDocSnap.exists()) {
+                    console.error("User document not found for ID:", userId);
+                    toast.error("User account not found.");
+                    setError(true);
+                    setPin("");
+                    setTimeout(() => {
+                        pinRefs.current[0]?.focus();
+                    }, 100);
+                    setLoading(false);
+                    return;
+                }
+            } catch (userError) {
+                console.error("Error fetching user document:", userError);
+                toast.error("Unable to verify user account.");
                 setError(true);
                 setPin("");
                 setTimeout(() => {
@@ -187,6 +223,7 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
                                 key={index}
                                 ref={(el) => { pinRefs.current[index] = el; }}
                                 type="password"
+                                inputMode="numeric"
                                 maxLength={1}
                                 value={pin[index] || ""}
                                 onChange={(e) => {
