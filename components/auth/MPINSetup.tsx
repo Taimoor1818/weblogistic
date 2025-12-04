@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button";
 import { hashMPIN, hashMPINSHA256 } from "@/lib/encryption";
 import { updateUserDocument } from "@/lib/subscription";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import { doc, setDoc } from "firebase/firestore";
 import { toast } from "react-hot-toast";
 import { Lock } from "lucide-react";
@@ -14,12 +14,13 @@ interface MPINSetupProps {
     open: boolean;
     onClose: () => void;
     userId: string;
+    userEmail: string;
     onSuccess?: () => void;
     required?: boolean;
     hasMPIN?: boolean;
 }
 
-export function MPINSetup({ open, onClose, userId, onSuccess, required = false, hasMPIN = false }: MPINSetupProps) {
+export function MPINSetup({ open, onClose, userId, userEmail, onSuccess, required = false, hasMPIN = false }: MPINSetupProps) {
     const [firstPin, setFirstPin] = useState("");
     const [confirmPin, setConfirmPin] = useState("");
     const [loading, setLoading] = useState(false);
@@ -67,19 +68,21 @@ export function MPINSetup({ open, onClose, userId, onSuccess, required = false, 
 
         setLoading(true);
         try {
-            // Hash MPIN with bcrypt for backward compatibility
+            // Hash MPIN with bcrypt for backward compatibility (stored in users collection)
             const mpinHash = await hashMPIN(firstPin);
             
-            // Hash MPIN with SHA-256 for new mpin_records collection
+            // Hash MPIN with SHA-256 for new mpin_records collection (simpler structure)
             const sha256Hash = await hashMPINSHA256(firstPin);
             
             // Update user document with bcrypt hash (backward compatibility)
             await updateUserDocument(userId, { mpinHash });
             
-            // Store SHA-256 hash in new mpin_records collection
+            // Store SHA-256 hash in new mpin_records collection with email and UID
             const mpinRecordRef = doc(db, "mpin_records", userId);
             await setDoc(mpinRecordRef, {
-                hashedMPIN: sha256Hash,
+                mpin: sha256Hash,
+                email: userEmail,
+                uid: userId,
                 createdAt: new Date(),
                 updatedAt: new Date()
             });
@@ -91,9 +94,9 @@ export function MPINSetup({ open, onClose, userId, onSuccess, required = false, 
             // Reset state
             setFirstPin("");
             setConfirmPin("");
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error setting MPIN:", error);
-            toast.error("Failed to set MPIN. Please try again.");
+            toast.error(`Failed to set MPIN: ${error.message || "Please try again"}`);
         } finally {
             setLoading(false);
         }

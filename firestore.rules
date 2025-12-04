@@ -16,7 +16,7 @@ service cloud.firestore {
     
     // Helper function to check if user owns the document
     function isOwner(userId) {
-      return request.auth.uid == userId;
+      return request.auth != null && request.auth.uid == userId;
     }
     
     // Users collection - users can only read/write their own data, admin can read all
@@ -33,6 +33,13 @@ service cloud.firestore {
     // MPIN Records collection - users can only read/write their own MPIN record
     match /mpin_records/{userId} {
       allow read, write: if isAuthenticated() && isOwner(userId);
+    }
+    
+    // Allow unauthenticated read access to users collection for MPIN verification
+    // This allows querying users by email during MPIN login flow
+    match /users/{userId} {
+      allow get: if request.query.email == resource.data.email && request.query.email != null;
+      allow list: if false; // Prevent listing all users
     }
     
     // Payment requests - users can create and read their own, admin can manage all

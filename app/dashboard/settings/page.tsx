@@ -258,6 +258,7 @@ export default function SettingsPage() {
                 open={showMPINSetup}
                 onClose={() => setShowMPINSetup(false)}
                 userId={user.uid}
+                userEmail={user.email}
                 onSuccess={() => {
                     toast.success("MPIN set successfully!");
                 }}
