@@ -3,9 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { hashMPIN, hashMPINSHA256 } from "@/lib/encryption";
-import { updateUserDocument } from "@/lib/subscription";
-import { db, auth } from "@/lib/firebase";
+import { hashMPINSHA256 } from "@/lib/encryption";
+import { db } from "@/lib/firebase";
 import { doc, setDoc } from "firebase/firestore";
 import { toast } from "react-hot-toast";
 import { Lock } from "lucide-react";
@@ -68,16 +67,10 @@ export function MPINSetup({ open, onClose, userId, userEmail, onSuccess, require
 
         setLoading(true);
         try {
-            // Hash MPIN with bcrypt for backward compatibility (stored in users collection)
-            const mpinHash = await hashMPIN(firstPin);
-            
-            // Hash MPIN with SHA-256 for new mpin_records collection (simpler structure)
+            // Hash MPIN with SHA-256 for mpin_records collection
             const sha256Hash = await hashMPINSHA256(firstPin);
             
-            // Update user document with bcrypt hash (backward compatibility)
-            await updateUserDocument(userId, { mpinHash });
-            
-            // Store SHA-256 hash in new mpin_records collection with email and UID
+            // Store SHA-256 hash in mpin_records collection with email and UID
             const mpinRecordRef = doc(db, "mpin_records", userId);
             await setDoc(mpinRecordRef, {
                 mpin: sha256Hash,
