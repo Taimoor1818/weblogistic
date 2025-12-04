@@ -105,7 +105,7 @@ export default function LoginPage() {
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.2 }}
-                className="z-10 w-full max-w-md space-y-8 rounded-2xl p-8 backdrop-blur-xl bg-black/20"
+                className="z-10 w-full max-w-md space-y-8 rounded-2xl p-8 backdrop-blur-sm bg-black/30"
             >
                 <div className="flex flex-col items-center text-center">
                     <div className="mb-4 rounded-full bg-primary/10 p-4">
