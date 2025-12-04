@@ -15,41 +15,9 @@ export default function LoginPage() {
     const [showMPINLogin, setShowMPINLogin] = useState(false);
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
     const [isIOS, setIsIOS] = useState(false);
-    const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
-    const [videoFade, setVideoFade] = useState(false);
-    const [mounted, setMounted] = useState(false);
     const router = useRouter();
 
-    // Video playlist with all four videos
-    const videos = [
-        "/videos/v1.mp4",
-        "/videos/v2.mp4",
-        "/videos/v3.mp4",
-        "/videos/v4.mp4"
-    ];
 
-    // Handle client-side mounting to avoid hydration errors
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    // Smooth video transitions every 5 seconds
-    useEffect(() => {
-        if (!mounted) return;
-
-        const interval = setInterval(() => {
-            // Trigger slow fade out
-            setVideoFade(true);
-
-            // Change video after fade completes
-            setTimeout(() => {
-                setCurrentVideoIndex((prev) => (prev + 1) % videos.length);
-                setVideoFade(false);
-            }, 200); // 200ms fade
-        }, 5000); // Every 5 seconds
-
-        return () => clearInterval(interval);
-    }, [videos.length, mounted]);
 
     // Check for PWA installation support
     useEffect(() => {
@@ -134,30 +102,28 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background">
-            {/* Video Background with smooth fade */}
-            {mounted && (
-                <div className="absolute inset-0 z-0 overflow-hidden bg-black">
-                    <video
-                        key={currentVideoIndex}
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                        className="w-full h-full object-cover brightness-[0.7] transition-opacity duration-200 ease-in-out"
-                        style={{ opacity: videoFade ? 0 : 1 }}
-                    >
-                        <source src={videos[currentVideoIndex]} type="video/mp4" />
-                        Your browser does not support the video tag.
-                    </video>
-                </div>
-            )}
+        <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-black">
+            {/* Video Background - Continuous Loop */}
+            <div className="absolute inset-0 z-0 overflow-hidden">
+                <video
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="w-full h-full object-cover brightness-[0.6]"
+                >
+                    <source src="/videos/video.mp4" type="video/mp4" />
+                    Your browser does not support the video tag.
+                </video>
+                {/* Adjusted overlay for better text readability and container visibility */}
+                <div className="absolute inset-0 bg-black/20" />
+            </div>
 
             <motion.div
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.2 }}
-                className="z-10 w-full max-w-md space-y-8 rounded-2xl p-8 backdrop-blur-xl bg-black/20"
+                className="z-10 w-full max-w-md space-y-8 rounded-2xl p-8 backdrop-blur-2xl bg-white/5 border border-white/10 shadow-2xl"
             >
                 <div className="flex flex-col items-center text-center">
                     <div className="mb-4 rounded-full bg-primary/10 p-4">
