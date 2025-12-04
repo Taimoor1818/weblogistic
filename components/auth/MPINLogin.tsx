@@ -33,8 +33,53 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
         const savedEmail = localStorage.getItem("lastMpinEmail");
         if (savedEmail) {
             setEmail(savedEmail);
+            // Automatically proceed to PIN entry for returning users
+            setTimeout(() => {
+                handleAutoEmailSubmit(savedEmail);
+            }, 100);
         }
     }, []);
+
+    const handleAutoEmailSubmit = async (userEmail: string) => {
+        setLoading(true);
+        try {
+            // Find user by email
+            const usersRef = collection(db, "users");
+            const q = query(usersRef, where("email", "==", userEmail));
+            const querySnapshot = await getDocs(q);
+
+            if (querySnapshot.empty) {
+                // If no account found, stay on email step
+                setStep("email");
+                setLoading(false);
+                return;
+            }
+
+            const userDoc = querySnapshot.docs[0];
+            const userData = userDoc.data();
+
+            if (!userData.mpinHash) {
+                // If no MPIN set, stay on email step
+                setStep("email");
+                setLoading(false);
+                return;
+            }
+
+            setUserMpinHash(userData.mpinHash);
+            setStep("pin");
+            setPin("");
+            
+            // Focus first PIN input
+            setTimeout(() => {
+                pinRefs.current[0]?.focus();
+            }, 100);
+        } catch (error: any) {
+            console.error("Error finding user:", error);
+            setStep("email");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleEmailSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -238,6 +283,9 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
                                     Enter all 4 digits
                                 </p>
                             )}
+                            <p className="text-xs text-center text-muted-foreground mt-4">
+                                Logged in with {email}
+                            </p>
                         </div>
 
                         {loading && (
