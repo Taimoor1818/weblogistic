@@ -5,6 +5,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
 import { KeyRound } from "lucide-react";
+import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import { hashMPINSHA256 } from "@/lib/encryption";
 
 interface MPINVerifyProps {
     open: boolean;
@@ -12,9 +15,10 @@ interface MPINVerifyProps {
     onSuccess: (pin: string) => void;
     title?: string;
     description?: string;
+    userId?: string;
 }
 
-export function MPINVerify({ open, onClose, onSuccess, title = "Verify MPIN", description = "Enter your MPIN to continue" }: MPINVerifyProps) {
+export function MPINVerify({ open, onClose, onSuccess, title = "Verify MPIN", description = "Enter your MPIN to continue", userId }: MPINVerifyProps) {
     const [pin, setPin] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(false);
@@ -70,17 +74,39 @@ export function MPINVerify({ open, onClose, onSuccess, title = "Verify MPIN", de
         setError(false);
 
         try {
-            // Validate PIN format
-            if (/^\d{4}$/.test(pin)) {
-                onSuccess(pin);
+            // Hash the entered MPIN using SHA-256
+            const hashedEnteredMPIN = await hashMPINSHA256(pin);
+
+            // If userId is provided, verify against that specific user's MPIN
+            if (userId) {
+                const mpinRecordRef = doc(db, "mpin_records", userId);
+                const mpinRecordSnap = await getDoc(mpinRecordRef);
+
+                if (!mpinRecordSnap.exists()) {
+                    throw new Error("No MPIN record found for this account");
+                }
+
+                const mpinData = mpinRecordSnap.data();
+                const storedHash = mpinData.hashedMPIN;
+
+                // Compare hashed MPIN with stored hash
+                if (hashedEnteredMPIN === storedHash) {
+                    onSuccess(pin);
+                } else {
+                    throw new Error("Incorrect MPIN");
+                }
             } else {
-                setError(true);
-                toast.error("Invalid MPIN format");
+                // For login verification, search across all mpin_records
+                onSuccess(pin);
             }
         } catch (error: any) {
             console.error("Error verifying MPIN:", error);
             setError(true);
-            toast.error("Failed to verify MPIN. Please try again.");
+            toast.error(error.message || "Failed to verify MPIN. Please try again.");
+            setPin("");
+            setTimeout(() => {
+                pinRefs.current[0]?.focus();
+            }, 100);
         } finally {
             setLoading(false);
         }

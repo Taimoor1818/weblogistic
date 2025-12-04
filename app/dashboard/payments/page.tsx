@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { exportToExcel } from "@/lib/export";
 import { MPINVerify } from "@/components/auth/MPINVerify";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Payment {
   id: string;
@@ -38,6 +39,7 @@ interface Payment {
 
 export default function PaymentsPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const { trips, drivers, vehicles, payments, employees, addPayment, updatePayment, deletePayment, profile } = useStore();
   const [editingPayment, setEditingPayment] = useState<any>(null);
   const [deletePaymentId, setDeletePaymentId] = useState<string | null>(null);
@@ -367,17 +369,20 @@ export default function PaymentsPage() {
       </Card>
 
       {/* MPIN Verification Dialog */}
-      <MPINVerify
-        open={showMpinDialog}
-        onClose={() => {
-          setShowMpinDialog(false);
-          setMpinAction(null);
-          setDeletePaymentId(null);
-        }}
-        onSuccess={handleMpinSubmit}
-        title={`Verify to ${mpinAction === 'edit' ? 'Edit' : 'Delete'} Payment`}
-        description="Enter your MPIN to confirm this action"
-      />
+      {user && (
+        <MPINVerify
+          open={showMpinDialog}
+          onClose={() => {
+            setShowMpinDialog(false);
+            setMpinAction(null);
+            setDeletePaymentId(null);
+          }}
+          onSuccess={handleMpinSubmit}
+          title={`Verify to ${mpinAction === 'edit' ? 'Edit' : 'Delete'} Payment`}
+          description="Enter your MPIN to confirm this action"
+          userId={user.uid}
+        />
+      )}
 
       {/* Edit Payment Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>

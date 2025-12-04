@@ -3,6 +3,7 @@ import { AppData, Driver, Vehicle, Customer, Trip, UserProfile, TeamMember, Paym
 import { db } from '@/lib/firebase';
 import { doc, updateDoc, onSnapshot, collection, addDoc, deleteDoc, query, Unsubscribe } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
+import { getAuth } from 'firebase/auth';
 
 interface StoreState extends AppData {
     isLoading: boolean;
@@ -69,6 +70,17 @@ export const useStore = create<StoreState>((set, get) => ({
     },
 
     initializeStore: async (uid) => {
+        // Check if user is authenticated with Firebase or MPIN before initializing
+        const auth = getAuth();
+        const isFirebaseAuthenticated = !!auth.currentUser;
+        const isMPINAuthenticated = typeof window !== 'undefined' && localStorage.getItem('mpin_authenticated_user') === uid;
+        
+        if (!isFirebaseAuthenticated && !isMPINAuthenticated) {
+            console.warn('User not authenticated, skipping store initialization');
+            set({ isLoading: false });
+            return;
+        }
+
         const { cleanup } = get();
         cleanup(); // Cleanup previous listeners if any
 

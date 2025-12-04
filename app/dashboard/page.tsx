@@ -21,54 +21,78 @@ export default function DashboardPage() {
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-            // Check if we have MPIN session authentication only on client side
-            let mpinSession = null;
-            if (typeof window !== 'undefined') {
-                mpinSession = sessionStorage.getItem('mpin_auth_session');
-            }
-            
-            if (firebaseUser || mpinSession) {
+            if (firebaseUser) {
                 try {
-                    let userId;
-                    if (firebaseUser) {
-                        userId = firebaseUser.uid;
-                    } else if (mpinSession) {
-                        const sessionData = JSON.parse(mpinSession);
-                        userId = sessionData.userId;
+                    const userDocRef = doc(db, "users", firebaseUser.uid);
+                    const userDocSnap = await getDoc(userDocRef);
+
+                    if (userDocSnap.exists()) {
+                        const userData = userDocSnap.data() as User;
+
+                        // Check and update subscription status
+                        const status = await checkAndUpdateSubscriptionStatus(userData);
+
+                        setProfile({
+                            uid: userData.uid,
+                            name: userData.displayName,
+                            email: userData.email,
+                            photoURL: userData.photoURL,
+                            companyName: userData.companyName || "",
+                            phone: userData.mobileNumber,
+                            subscriptionStatus: status,
+                            role: userData.role
+                        });
+
+                        // Redirect if payment is needed
+                        if (status === "pending_payment" || status === "expired") {
+                            router.push("/dashboard/payments");
+                            return;
+                        }
+                    } else {
+                        router.push("/login");
                     }
-                    
-                    if (userId) {
-                        const userDocRef = doc(db, "users", userId);
+                } catch (error) {
+                    console.error("Error fetching user data:", error);
+                    toast.error("Failed to load dashboard data");
+                } finally {
+                    setLoading(false);
+                }
+            } else {
+                // Check for MPIN session
+                const mpinUserId = typeof window !== 'undefined' ? localStorage.getItem('mpin_authenticated_user') : null;
+
+                if (mpinUserId) {
+                    try {
+                        const userDocRef = doc(db, "users", mpinUserId);
                         const userDocSnap = await getDoc(userDocRef);
 
                         if (userDocSnap.exists()) {
                             const userData = userDocSnap.data() as User;
 
-                            // Check and update subscription status
-                            const status = await checkAndUpdateSubscriptionStatus(userData);
-
-                            // Convert User to UserProfile
+                            // For MPIN users, we might skip subscription checks or handle them differently
+                            // For now, load the profile
                             setProfile({
                                 uid: userData.uid,
-                                name: userData.displayName || userData.email || "User",
-                                email: userData.email || "",
+                                name: userData.displayName,
+                                email: userData.email,
                                 photoURL: userData.photoURL,
                                 companyName: userData.companyName || "",
                                 phone: userData.mobileNumber,
-                                subscriptionStatus: status,
-                                role: userData.role,
-                                mpinHash: userData.mpinHash
+                                subscriptionStatus: userData.subscriptionStatus || 'active', // Default or fetch real status
+                                role: userData.role
                             });
+
+                            setLoading(false);
+                            return; // Stay on dashboard
                         }
+                    } catch (error) {
+                        console.error("Error fetching MPIN user data:", error);
                     }
-                } catch (error) {
-                    console.error("Error fetching user data:", error);
-                    toast.error("Failed to load user data");
-                } finally {
-                    setLoading(false);
                 }
-            } else {
+
+                // If no Firebase user AND no MPIN user, then redirect
                 router.push("/login");
+                setLoading(false);
             }
         });
 
@@ -100,10 +124,18 @@ export default function DashboardPage() {
 
             {/* Top 4 Widgets */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-                <Card>
+                <Card className="hover:border-primary/50 transition-all cursor-pointer" onClick={() => router.push('/dashboard/trips')}>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Shipments</CardTitle>
-                        <div className="h-4 w-4 text-muted-foreground">📦</div>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-blue-500">
+                            <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2" />
+                            <path d="M15 18H9" />
+                            <path d="M19 22V10a2 2 0 0 0-2-2h-4" />
+                            <path d="M18 13h-1" />
+                            <path d="M22 18v-2" />
+                            <circle cx="18" cy="22" r="1" />
+                            <circle cx="14" cy="22" r="1" />
+                        </svg>
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{totalShipments}</div>
@@ -111,10 +143,18 @@ export default function DashboardPage() {
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="hover:border-primary/50 transition-all cursor-pointer" onClick={() => router.push('/dashboard/drivers')}>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Active Drivers</CardTitle>
-                        <div className="h-4 w-4 text-muted-foreground">🚗</div>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-green-500">
+                            <path d="M17 21v-2a1 1 0 0 1-1-1" />
+                            <path d="M21 21v-2a1 1 0 0 1-1-1" />
+                            <path d="M22 19h-2a2 2 0 0 1-2-2v-1" />
+                            <path d="M2 19h2a2 2 0 0 0 2-2v-1" />
+                            <path d="M16 5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2" />
+                            <path d="M18 7v10a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7" />
+                            <rect x="4" y="5" width="16" height="14" rx="1" />
+                        </svg>
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{activeDrivers}</div>
@@ -122,31 +162,55 @@ export default function DashboardPage() {
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="hover:border-primary/50 transition-all cursor-pointer" onClick={() => router.push('/dashboard/payments')}>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Pending Payments</CardTitle>
-                        <div className="h-4 w-4 text-muted-foreground">💰</div>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-orange-500">
+                            <path d="M12 2v20" />
+                            <path d="M8 10H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h4" />
+                            <path d="M20 10h-4a2 2 0 0 0-2-2V6a2 2 0 0 0 2-2h4" />
+                            <path d="M8 14h.01" />
+                            <path d="M8 18h.01" />
+                            <path d="M16 14h.01" />
+                            <path d="M16 18h.01" />
+                        </svg>
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{pendingPayments}</div>
-                        <p className="text-xs text-muted-foreground">Awaiting processing</p>
+                        <p className="text-xs text-muted-foreground">Requires attention</p>
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="hover:border-primary/50 transition-all cursor-pointer" onClick={() => router.push('/dashboard/vehicles')}>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Active Vehicles</CardTitle>
-                        <div className="h-4 w-4 text-muted-foreground">🚛</div>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-purple-500">
+                            <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2" />
+                            <path d="M15 18H9" />
+                            <path d="M19 22V10a2 2 0 0 0-2-2h-4" />
+                            <path d="M18 13h-1" />
+                            <path d="M22 18v-2" />
+                            <circle cx="18" cy="22" r="1" />
+                            <circle cx="14" cy="22" r="1" />
+                        </svg>
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{activeVehicles}</div>
-                        <p className="text-xs text-muted-foreground">Available for dispatch</p>
+                        <p className="text-xs text-muted-foreground">Fleet status</p>
                     </CardContent>
                 </Card>
             </div>
 
-            {/* Main Dashboard Widgets */}
+            {/* Existing Widgets */}
             <DashboardWidgets />
+
+            <div className="mt-8 flex justify-center">
+                <Button asChild>
+                    <Link href="/dashboard/trips/create">
+                        Create New Shipment
+                    </Link>
+                </Button>
+            </div>
         </div>
     );
 }

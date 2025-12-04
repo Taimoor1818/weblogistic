@@ -244,17 +244,20 @@ export default function TeamPage() {
                 )}
             </div>
 
-            <MPINVerify
-                open={showMPINVerify}
-                onClose={() => {
-                    setShowMPINVerify(false);
-                    setActionType("add");
-                    setMemberToDelete(null);
-                }}
-                onSuccess={onMPINVerified}
-                title={actionType === "add" ? "Verify to Add Member" : "Verify to Remove Member"}
-                description="Enter your MPIN to confirm this action"
-            />
+            {user && (
+                <MPINVerify
+                    open={showMPINVerify}
+                    onClose={() => {
+                        setShowMPINVerify(false);
+                        setActionType("add");
+                        setMemberToDelete(null);
+                    }}
+                    onSuccess={onMPINVerified}
+                    title={actionType === "add" ? "Verify to Add Member" : "Verify to Remove Member"}
+                    description="Enter your MPIN to confirm this action"
+                    userId={user.uid}
+                />
+            )}
         </div>
     );
 }

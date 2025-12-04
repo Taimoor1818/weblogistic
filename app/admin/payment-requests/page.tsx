@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { collection, query, getDocs, orderBy, doc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
+import { collection, query, getDocs, orderBy, doc, updateDoc, deleteDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import AdminGuard from "@/components/admin/AdminGuard";
 import { PaymentRequest } from "@/lib/types";
@@ -69,11 +69,12 @@ export default function PaymentRequestsPage() {
                 };
 
                 if (type === "approve") {
-                    // Get the request to get the userId
-                    const requestDoc = await getDocs(query(collection(db, "paymentRequests")));
-                    const request = requestDoc.docs.find(d => d.id === id);
-                    if (request) {
-                        const requestData = request.data() as PaymentRequest;
+                    // Get the specific request document to get the userId
+                    const requestDocRef = doc(db, "paymentRequests", id);
+                    const requestDocSnap = await getDoc(requestDocRef);
+                    
+                    if (requestDocSnap.exists()) {
+                        const requestData = requestDocSnap.data() as PaymentRequest;
                         // Activate the user's subscription
                         await activateSubscription(requestData.userId);
                     }
@@ -184,16 +185,19 @@ export default function PaymentRequestsPage() {
                     )}
                 </div>
 
-                <MPINVerify
-                    open={showMPINVerify}
-                    onClose={() => {
-                        setShowMPINVerify(false);
-                        setSelectedAction(null);
-                    }}
-                    onSuccess={executeAction}
-                    title={`Confirm ${selectedAction?.type}`}
-                    description="Enter MPIN to confirm this action"
-                />
+                {user && (
+                    <MPINVerify
+                        open={showMPINVerify}
+                        onClose={() => {
+                            setShowMPINVerify(false);
+                            setSelectedAction(null);
+                        }}
+                        onSuccess={executeAction}
+                        title={`Confirm ${selectedAction?.type}`}
+                        description="Enter MPIN to confirm this action"
+                        userId={user.uid}
+                    />
+                )}
             </div>
         </AdminGuard>
     );

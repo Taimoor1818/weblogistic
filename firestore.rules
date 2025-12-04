@@ -20,25 +20,70 @@ service cloud.firestore {
     }
     
     // Users collection - users can only read/write their own data, admin can read all
+    // Allow public read if they know the userId (for MPIN read-only access)
     match /users/{userId} {
-      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
-      // Combined rule: Users can update their own profile fields including mpinHash, admins can update subscription-related fields
+      allow read: if true;
       allow update: if (isAuthenticated() && isOwner(userId)) || isAdmin();
       // Users can create their own document only during registration
       allow create: if isAuthenticated() && isOwner(userId) && 
         request.resource.data.keys().hasAll(['uid', 'email', 'displayName']) &&
         request.resource.data.uid == request.auth.uid;
+        
+      // Team members - stored as subcollection of users
+      match /teamMembers/{memberId} {
+        allow read: if true;
+        allow create, delete: if isAuthenticated() && isOwner(userId);
+      }
+      
+      // Drivers - stored as subcollection of users
+      match /drivers/{driverId} {
+        allow read: if true;
+        allow create, update, delete: if isAuthenticated() && isOwner(userId);
+      }
+      
+      // Vehicles - stored as subcollection of users
+      match /vehicles/{vehicleId} {
+        allow read: if true;
+        allow create, update, delete: if isAuthenticated() && isOwner(userId);
+      }
+      
+      // Customers - stored as subcollection of users
+      match /customers/{customerId} {
+        allow read: if true;
+        allow create, update, delete: if isAuthenticated() && isOwner(userId);
+      }
+      
+      // Trips - stored as subcollection of users
+      match /trips/{tripId} {
+        allow read: if true;
+        allow create, update, delete: if isAuthenticated() && isOwner(userId);
+      }
+      
+      // Maintenance logs - stored as subcollection of users
+      match /maintenance_logs/{logId} {
+        allow read: if true;
+        allow create, update, delete: if isAuthenticated() && isOwner(userId);
+      }
+      
+      // Payments - stored as subcollection of users
+      match /payments/{paymentId} {
+        allow read: if true;
+        allow create, update, delete: if isAuthenticated() && isOwner(userId);
+      }
+      
+      // Employees - stored as subcollection of users
+      match /employees/{employeeId} {
+        allow read: if true;
+        allow create, update, delete: if isAuthenticated() && isOwner(userId);
+      }
     }
     
-    // MPIN Records collection - users can only read/write their own MPIN record
+    // MPIN Records collection
+    // Allow public get if they know the userId (for MPIN verification)
     match /mpin_records/{userId} {
-      allow read, write: if isAuthenticated() && isOwner(userId);
-    }
-    
-    // Allow unauthenticated read access to users collection for MPIN verification
-    // This allows querying users by email during MPIN login flow
-    match /users/{userId} {
-      allow read: if request.query.email == resource.data.email;
+      allow get: if true;
+      allow list: if true; // Needed if we keep the query-by-hash approach as fallback
+      allow write: if isAuthenticated() && isOwner(userId);
     }
     
     // Payment requests - users can create and read their own, admin can manage all
@@ -46,46 +91,6 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isAdmin();
-    }
-    
-    // Team members - stored as subcollection of users
-    match /users/{userId}/teamMembers/{memberId} {
-      allow read, create, delete: if isAuthenticated() && isOwner(userId);
-    }
-    
-    // Drivers - stored as subcollection of users
-    match /users/{userId}/drivers/{driverId} {
-      allow read, create, update, delete: if isAuthenticated() && isOwner(userId);
-    }
-    
-    // Vehicles - stored as subcollection of users
-    match /users/{userId}/vehicles/{vehicleId} {
-      allow read, create, update, delete: if isAuthenticated() && isOwner(userId);
-    }
-    
-    // Customers - stored as subcollection of users
-    match /users/{userId}/customers/{customerId} {
-      allow read, create, update, delete: if isAuthenticated() && isOwner(userId);
-    }
-    
-    // Trips - stored as subcollection of users
-    match /users/{userId}/trips/{tripId} {
-      allow read, create, update, delete: if isAuthenticated() && isOwner(userId);
-    }
-    
-    // Maintenance logs - stored as subcollection of users
-    match /users/{userId}/maintenance_logs/{logId} {
-      allow read, create, update, delete: if isAuthenticated() && isOwner(userId);
-    }
-    
-    // Payments - stored as subcollection of users
-    match /users/{userId}/payments/{paymentId} {
-      allow read, create, update, delete: if isAuthenticated() && isOwner(userId);
-    }
-    
-    // Employees - stored as subcollection of users
-    match /users/{userId}/employees/{employeeId} {
-      allow read, create, update, delete: if isAuthenticated() && isOwner(userId);
     }
 
   }

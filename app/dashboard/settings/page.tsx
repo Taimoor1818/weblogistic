@@ -125,14 +125,55 @@ export default function SettingsPage() {
                                 {user.email}
                             </div>
                         </div>
-
                         <div className="grid gap-2">
-                            <Label className="text-muted-foreground">Company Name</Label>
+                            <Label className="text-muted-foreground">Name</Label>
+                            <div className="px-4 py-2 rounded-lg bg-muted text-sm">
+                                {user.displayName}
+                            </div>
+                        </div>
+                        <div className="grid gap-2">
+                            <Label className="text-muted-foreground">Role</Label>
+                            <div className="px-4 py-2 rounded-lg bg-muted text-sm capitalize">
+                                {user.role}
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Company Profile */}
+                <Card className="border-2 hover:border-primary/50 transition-colors">
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Building2 className="h-5 w-5 text-primary" />
+                                <CardTitle>Company Profile</CardTitle>
+                            </div>
+                            {!isEditing && (
+                                <Button onClick={handleEditClick} variant="outline" size="sm">
+                                    <Edit2 className="h-4 w-4 mr-2" />
+                                    Edit
+                                </Button>
+                            )}
+                        </div>
+                        <CardDescription>
+                            Your business information and contact details
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="companyName" className="flex items-center gap-2">
+                                <Building2 className="h-4 w-4 text-muted-foreground" />
+                                Company Name
+                            </Label>
                             {isEditing ? (
                                 <Input
+                                    id="companyName"
                                     value={formData.companyName}
-                                    onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                                    onChange={(e) =>
+                                        setFormData({ ...formData, companyName: e.target.value })
+                                    }
                                     placeholder="Enter company name"
+                                    className="transition-all"
                                 />
                             ) : (
                                 <div className="px-4 py-2 rounded-lg bg-muted text-sm">
@@ -141,36 +182,48 @@ export default function SettingsPage() {
                             )}
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="grid gap-2">
-                                <Label className="text-muted-foreground">City</Label>
-                                {isEditing ? (
-                                    <Input
-                                        value={formData.city}
-                                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                                        placeholder="Enter city"
-                                    />
-                                ) : (
-                                    <div className="px-4 py-2 rounded-lg bg-muted text-sm">
-                                        {formData.city || "Not set"}
-                                    </div>
-                                )}
-                            </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="city" className="flex items-center gap-2">
+                                <MapPin className="h-4 w-4 text-muted-foreground" />
+                                City
+                            </Label>
+                            {isEditing ? (
+                                <Input
+                                    id="city"
+                                    value={formData.city}
+                                    onChange={(e) =>
+                                        setFormData({ ...formData, city: e.target.value })
+                                    }
+                                    placeholder="Enter city"
+                                    className="transition-all"
+                                />
+                            ) : (
+                                <div className="px-4 py-2 rounded-lg bg-muted text-sm">
+                                    {formData.city || "Not set"}
+                                </div>
+                            )}
+                        </div>
 
-                            <div className="grid gap-2">
-                                <Label className="text-muted-foreground">Mobile Number</Label>
-                                {isEditing ? (
-                                    <Input
-                                        value={formData.mobileNumber}
-                                        onChange={(e) => setFormData({ ...formData, mobileNumber: e.target.value })}
-                                        placeholder="Enter mobile number"
-                                    />
-                                ) : (
-                                    <div className="px-4 py-2 rounded-lg bg-muted text-sm">
-                                        {formData.mobileNumber || "Not set"}
-                                    </div>
-                                )}
-                            </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="mobileNumber" className="flex items-center gap-2">
+                                <Phone className="h-4 w-4 text-muted-foreground" />
+                                Mobile Number
+                            </Label>
+                            {isEditing ? (
+                                <Input
+                                    id="mobileNumber"
+                                    value={formData.mobileNumber}
+                                    onChange={(e) =>
+                                        setFormData({ ...formData, mobileNumber: e.target.value })
+                                    }
+                                    placeholder="Enter mobile number"
+                                    className="transition-all"
+                                />
+                            ) : (
+                                <div className="px-4 py-2 rounded-lg bg-muted text-sm">
+                                    {formData.mobileNumber || "Not set"}
+                                </div>
+                            )}
                         </div>
 
                         {isEditing && (
@@ -238,13 +291,14 @@ export default function SettingsPage() {
                 />
             )}
 
-            {user && (
+            {user && hasMPIN && (
                 <MPINVerify
                     open={showMPINVerify}
                     onClose={() => setShowMPINVerify(false)}
                     onSuccess={handleMPINVerified}
                     title="Verify to Edit"
                     description="Enter your MPIN to edit company profile"
+                    userId={user.uid}
                 />
             )}
         </div>

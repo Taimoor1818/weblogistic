@@ -12,13 +12,6 @@ import {
 
 import { useStore } from "@/store/useStore";
 
-// Define the structure for MPIN session data
-interface MPINSessionData {
-    userId: string;
-    userEmail: string;
-    timestamp: number;
-}
-
 export function useAuth() {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
@@ -30,7 +23,7 @@ export function useAuth() {
 
             try {
                 if (firebaseUser) {
-                    // Standard Firebase authentication flow
+                    // Initialize user document if it doesn't exist
                     await initializeUserDocument(
                         firebaseUser.uid,
                         firebaseUser.email!,
@@ -51,55 +44,46 @@ export function useAuth() {
                         useStore.getState().initializeStore(firebaseUser.uid);
                     }
                 } else {
-                    // Check for MPIN session authentication only on client side
+                    // Check for MPIN authentication
                     if (typeof window !== 'undefined') {
-                        const mpinSession = sessionStorage.getItem('mpin_auth_session');
-                        if (mpinSession) {
-                            try {
-                                const sessionData: MPINSessionData = JSON.parse(mpinSession);
+                        const mpinUserId = localStorage.getItem('mpin_authenticated_user');
+                        if (mpinUserId) {
+                            // Get user document for MPIN authenticated user
+                            const userDoc = await getUserDocument(mpinUserId);
+                            
+                            if (userDoc) {
+                                // Check and update subscription status
+                                const status = await checkAndUpdateSubscriptionStatus(userDoc);
                                 
-                                // Check if session is still valid (e.g., not older than 24 hours)
-                                const now = Date.now();
-                                const sessionAge = now - sessionData.timestamp;
-                                const maxSessionAge = 24 * 60 * 60 * 1000; // 24 hours
-
-                                if (sessionAge < maxSessionAge) {
-                                    // Get user document
-                                    const userDoc = await getUserDocument(sessionData.userId);
-
-                                    if (userDoc) {
-                                        // Check and update subscription status
-                                        const status = await checkAndUpdateSubscriptionStatus(userDoc);
-
-                                        setUser({ ...userDoc, subscriptionStatus: status });
-
-                                        // Initialize global store
-                                        useStore.getState().initializeStore(sessionData.userId);
-                                        
-                                        // We're done loading
-                                        setLoading(false);
-                                        return;
-                                    }
-                                } else {
-                                    // Session expired, clear it
-                                    sessionStorage.removeItem('mpin_auth_session');
-                                }
-                            } catch (error) {
-                                console.error("Error parsing MPIN session:", error);
-                                sessionStorage.removeItem('mpin_auth_session');
+                                setUser({ ...userDoc, subscriptionStatus: status });
+                                
+                                // Initialize global store
+                                useStore.getState().initializeStore(mpinUserId);
+                            } else {
+                                // If user document doesn't exist, clear MPIN auth
+                                localStorage.removeItem('mpin_authenticated_user');
+                                setUser(null);
+                                useStore.getState().cleanup();
                             }
+                        } else {
+                            setUser(null);
+                            useStore.getState().cleanup();
                         }
+                    } else {
+                        setUser(null);
+                        useStore.getState().cleanup();
                     }
-                    
-                    // No valid authentication found
-                    setUser(null);
-                    useStore.getState().cleanup();
                 }
             } catch (error) {
                 console.error("Error in auth state change:", error);
                 // Even if there's an error, we still need to stop loading
                 setUser(null);
                 useStore.getState().cleanup();
+                
+                // Clear MPIN auth on error
+                if (typeof window !== 'undefined') {
+                    localStorage.removeItem('mpin_authenticated_user');
+                }
             } finally {
                 // Always set loading to false when auth state change is complete
                 setLoading(false);

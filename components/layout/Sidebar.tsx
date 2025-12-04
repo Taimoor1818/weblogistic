@@ -17,7 +17,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useStore } from "@/store/useStore";
-import { customSignOut } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
+import { signOut } from "firebase/auth";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -30,7 +31,12 @@ export function Sidebar() {
 
     const handleLogout = async () => {
         try {
-            await customSignOut();
+            // Clear MPIN authentication state
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem('mpin_authenticated_user');
+            }
+            
+            await signOut(auth);
             router.push("/login");
             toast.success("Logged out successfully");
         } catch {

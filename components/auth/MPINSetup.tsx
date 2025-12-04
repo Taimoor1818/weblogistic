@@ -57,7 +57,7 @@ export function MPINSetup({ open, onClose, userId, userEmail, onSuccess, require
     const handleKeyDown = (e: React.KeyboardEvent, index: number, isConfirm = false) => {
         const currentPin = isConfirm ? confirmPin : pin;
         const refs = isConfirm ? confirmPinRefs : pinRefs;
-        
+
         if (e.key === "Backspace" && !currentPin[index] && index > 0) {
             refs.current[index - 1]?.focus();
         }
@@ -92,11 +92,11 @@ export function MPINSetup({ open, onClose, userId, userEmail, onSuccess, require
             // Save MPIN
             setLoading(true);
             setError("");
-            
+
             try {
                 // Hash the MPIN using SHA-256
                 const hashedMPIN = await hashMPINSHA256(pin);
-                
+
                 // Store in mpin_records collection with userId as document ID
                 const mpinRecordRef = doc(db, "mpin_records", userId);
                 await setDoc(mpinRecordRef, {
@@ -106,6 +106,17 @@ export function MPINSetup({ open, onClose, userId, userEmail, onSuccess, require
                     createdAt: new Date(),
                     updatedAt: new Date()
                 });
+
+                // Cleanup: Ensure mpinHash is NOT in the users collection
+                const userDocRef = doc(db, "users", userId);
+                try {
+                    const { updateDoc, deleteField } = await import("firebase/firestore");
+                    await updateDoc(userDocRef, {
+                        mpinHash: deleteField()
+                    });
+                } catch (cleanupError) {
+                    console.warn("Could not cleanup mpinHash from users collection:", cleanupError);
+                }
 
                 setStep(3);
                 if (onSuccess) onSuccess();
@@ -147,10 +158,10 @@ export function MPINSetup({ open, onClose, userId, userEmail, onSuccess, require
                         {hasMPIN ? "Change MPIN" : "Set Up MPIN"}
                     </DialogTitle>
                     <DialogDescription className="text-center">
-                        {step === 1 
-                            ? "Create a 4-digit PIN for quick access" 
-                            : step === 2 
-                                ? "Confirm your 4-digit PIN" 
+                        {step === 1
+                            ? "Create a 4-digit PIN for quick access"
+                            : step === 2
+                                ? "Confirm your 4-digit PIN"
                                 : "MPIN setup complete!"}
                     </DialogDescription>
                 </DialogHeader>

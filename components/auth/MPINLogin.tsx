@@ -61,35 +61,69 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
         try {
             // Hash the entered MPIN using SHA-256
             const hashedEnteredMPIN = await hashMPINSHA256(pin);
+            console.log("Attempting MPIN login with hash:", hashedEnteredMPIN);
 
-            // Query Firestore: mpin_records collection to find matching record
-            // Since we don't know the userId, we need to query by hashedMPIN
-            const mpinRecordsRef = collection(db, "mpin_records");
-            const q = query(mpinRecordsRef, where("hashedMPIN", "==", hashedEnteredMPIN));
-            const querySnapshot = await getDocs(q);
+            let userId = null;
 
-            if (querySnapshot.empty) {
-                toast.error("Invalid MPIN. Please try again.");
-                setError(true);
-                setPin("");
-                setTimeout(() => {
-                    pinRefs.current[0]?.focus();
-                }, 100);
-                setLoading(false);
-                return;
+            // Optimization: Check if we have a stored user ID to verify against directly
+            if (typeof window !== 'undefined') {
+                const storedUserId = localStorage.getItem('mpin_authenticated_user');
+                if (storedUserId) {
+                    console.log("Found stored user ID:", storedUserId);
+                    // Try to fetch specific MPIN record
+                    const mpinRecordRef = doc(db, "mpin_records", storedUserId);
+                    const mpinRecordSnap = await getDoc(mpinRecordRef);
+
+                    if (mpinRecordSnap.exists()) {
+                        const data = mpinRecordSnap.data();
+                        console.log("Found MPIN record for stored user. Stored hash:", data.hashedMPIN);
+                        if (data.hashedMPIN === hashedEnteredMPIN) {
+                            userId = storedUserId;
+                            console.log("MPIN matched via stored ID");
+                        } else {
+                            console.warn("MPIN mismatch for stored user ID");
+                        }
+                    } else {
+                        console.warn("No MPIN record found for stored user ID");
+                    }
+                }
             }
 
-            // Get the user ID from the matching record
-            const mpinRecordDoc = querySnapshot.docs[0];
-            const mpinData = mpinRecordDoc.data();
-            const userId = mpinData.userId;
-            const userEmail = mpinData.userEmail;
+            if (!userId) {
+                console.log("Falling back to global query...");
+                // Fallback: Query Firestore: mpin_records collection to find matching record
+                // Search across the entire mpin_records collection for a document with matching hashedMPIN
+                const mpinRecordsRef = collection(db, "mpin_records");
+                const q = query(mpinRecordsRef, where("hashedMPIN", "==", hashedEnteredMPIN));
+                const querySnapshot = await getDocs(q);
+
+                console.log("Global query results:", querySnapshot.size);
+
+                if (querySnapshot.empty) {
+                    console.error("No matching MPIN record found via global query");
+                    toast.error("Invalid MPIN. Please try again.");
+                    setError(true);
+                    setPin("");
+                    setTimeout(() => {
+                        pinRefs.current[0]?.focus();
+                    }, 100);
+                    setLoading(false);
+                    return;
+                }
+
+                // Get the user ID from the matching record
+                const mpinRecordDoc = querySnapshot.docs[0];
+                const mpinData = mpinRecordDoc.data();
+                userId = mpinData.userId;
+                console.log("Found user ID via global query:", userId);
+            }
 
             // Get user document to verify existence
             const userDocRef = doc(db, "users", userId);
             const userDocSnap = await getDoc(userDocRef);
 
             if (!userDocSnap.exists()) {
+                console.error("User document not found for ID:", userId);
                 toast.error("User account not found.");
                 setError(true);
                 setPin("");
@@ -100,16 +134,12 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
                 return;
             }
 
-            // Store session data in sessionStorage for MPIN authentication
-            const sessionData = {
-                userId,
-                userEmail,
-                timestamp: Date.now()
-            };
-            
-            sessionStorage.setItem('mpin_auth_session', JSON.stringify(sessionData));
+            // Store the user ID for MPIN authentication
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('mpin_authenticated_user', userId);
+            }
 
-            // Close the dialog and navigate to dashboard
+            // Successfully verified - redirect to dashboard
             onClose();
             toast.success("Welcome back!");
             router.push("/dashboard");
