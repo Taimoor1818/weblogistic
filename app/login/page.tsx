@@ -110,7 +110,7 @@ export default function LoginPage() {
                     playsInline
                     className="min-h-full min-w-full object-cover brightness-50"
                 >
-                    <source src="/videos/logistic1.mp4" type="video/mp4" />
+                    <source src="/videos/v1.mp4" type="video/mp4" />
                     Your browser does not support the video tag.
                 </video>
             </div>
