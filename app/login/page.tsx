@@ -16,6 +16,8 @@ export default function LoginPage() {
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
     const [isIOS, setIsIOS] = useState(false);
     const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+    const [videoFade, setVideoFade] = useState(false);
+    const [mounted, setMounted] = useState(false);
     const router = useRouter();
 
     // Video playlist with all four videos
@@ -26,14 +28,28 @@ export default function LoginPage() {
         "/videos/v4.mp4"
     ];
 
-    // Rotate videos every 5 seconds
+    // Handle client-side mounting to avoid hydration errors
     useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    // Smooth video transitions every 5 seconds
+    useEffect(() => {
+        if (!mounted) return;
+
         const interval = setInterval(() => {
-            setCurrentVideoIndex(prevIndex => (prevIndex + 1) % videos.length);
-        }, 5000); // Change video every 5 seconds
+            // Trigger slow fade out
+            setVideoFade(true);
+
+            // Change video after fade completes
+            setTimeout(() => {
+                setCurrentVideoIndex((prev) => (prev + 1) % videos.length);
+                setVideoFade(false);
+            }, 200); // 200ms fade
+        }, 5000); // Every 5 seconds
 
         return () => clearInterval(interval);
-    }, [videos.length]);
+    }, [videos.length, mounted]);
 
     // Check for PWA installation support
     useEffect(() => {
@@ -101,7 +117,7 @@ export default function LoginPage() {
             const { outcome } = await deferredPrompt.userChoice;
             // We've used the prompt, and can't use it again, throw it away
             setDeferredPrompt(null);
-            
+
             if (outcome === 'accepted') {
                 toast.success("App installation started! Check your desktop/mobile home screen for the shortcut.");
             } else {
@@ -119,21 +135,24 @@ export default function LoginPage() {
 
     return (
         <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background">
-            {/* Video Background */}
-            <div className="absolute inset-0 z-0 overflow-hidden">
-                <video 
-                    key={currentVideoIndex}
-                    autoPlay 
-                    loop 
-                    muted 
-                    playsInline
-                    className="min-h-full min-w-full object-cover brightness-50"
-                >
-                    <source src={videos[currentVideoIndex]} type="video/mp4" />
-                    Your browser does not support the video tag.
-                </video>
-            </div>
-            
+            {/* Video Background with smooth fade */}
+            {mounted && (
+                <div className="absolute inset-0 z-0 overflow-hidden bg-black">
+                    <video
+                        key={currentVideoIndex}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        className="w-full h-full object-cover brightness-[0.7] transition-opacity duration-200 ease-in-out"
+                        style={{ opacity: videoFade ? 0 : 1 }}
+                    >
+                        <source src={videos[currentVideoIndex]} type="video/mp4" />
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+            )}
+
             <motion.div
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
