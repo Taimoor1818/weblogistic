@@ -45,6 +45,7 @@ export default function PaymentsPage() {
   const [deletePaymentId, setDeletePaymentId] = useState<string | null>(null);
   const [showMpinDialog, setShowMpinDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showAddDialog, setShowAddDialog] = useState(false);
   const [mpinAction, setMpinAction] = useState<'edit' | 'delete' | null>(null);
   const [editForm, setEditForm] = useState({
     type: 'other' as 'trip' | 'salary' | 'expense' | 'fuel' | 'other',
@@ -224,7 +225,7 @@ export default function PaymentsPage() {
               Track and manage all financial transactions
             </p>
           </div>
-          <Button onClick={() => router.push('/dashboard/payment')}>
+          <Button onClick={() => setShowAddDialog(true)}>
             <PlusCircle className="h-4 w-4 mr-2" />
             New Payment
           </Button>
@@ -286,7 +287,7 @@ export default function PaymentsPage() {
                 Get started by adding your first payment.
               </p>
               <div className="mt-6">
-                <Button onClick={() => router.push('/dashboard/payment')}>
+                <Button onClick={() => setShowAddDialog(true)}>
                   <PlusCircle className="h-4 w-4 mr-2" />
                   Add Payment
                 </Button>
@@ -460,6 +461,91 @@ export default function PaymentsPage() {
               </Button>
               <Button onClick={handleEditSubmit}>
                 Save Changes
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Payment Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add New Payment</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="add-type">Type</Label>
+              <Select
+                value={newPayment.type}
+                onValueChange={(value: any) => setNewPayment({...newPayment, type: value})}
+              >
+                <SelectTrigger id="add-type">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="trip">Trip</SelectItem>
+                  <SelectItem value="salary">Salary</SelectItem>
+                  <SelectItem value="expense">Expense</SelectItem>
+                  <SelectItem value="fuel">Fuel</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="add-amount">Amount</Label>
+              <Input
+                id="add-amount"
+                type="number"
+                value={newPayment.amount}
+                onChange={(e) => setNewPayment({...newPayment, amount: e.target.value})}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="add-description">Description</Label>
+              <Input
+                id="add-description"
+                value={newPayment.description}
+                onChange={(e) => setNewPayment({...newPayment, description: e.target.value})}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="add-date">Date</Label>
+              <Input
+                id="add-date"
+                type="date"
+                value={newPayment.date}
+                onChange={(e) => setNewPayment({...newPayment, date: e.target.value})}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="add-employee">Employee (Optional)</Label>
+              <Select
+                value={newPayment.employeeId}
+                onValueChange={(value) => setNewPayment({...newPayment, employeeId: value})}
+              >
+                <SelectTrigger id="add-employee">
+                  <SelectValue placeholder="Select employee" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {employees.map((employee: any) => (
+                    <SelectItem key={employee.id} value={employee.id}>
+                      {employee.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => {
+                handleAddPayment();
+                setShowAddDialog(false);
+              }}>
+                Add Payment
               </Button>
             </div>
           </div>
