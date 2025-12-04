@@ -46,6 +46,7 @@ export default function PaymentsPage() {
   const [showMpinDialog, setShowMpinDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showReceivePayments, setShowReceivePayments] = useState(false);
   const [mpinAction, setMpinAction] = useState<'edit' | 'delete' | null>(null);
   const [editForm, setEditForm] = useState({
     type: 'other' as 'trip' | 'salary' | 'expense' | 'fuel' | 'other',
@@ -183,14 +184,19 @@ export default function PaymentsPage() {
       return;
     }
 
-    // Filter payments by date range
-    const filteredPayments = payments.filter((payment: any) => {
+    // Filter payments by date range and receive status
+    let filteredPayments = payments.filter((payment: any) => {
       const paymentDate = new Date(payment.date);
       const startDate = new Date(exportStartDate);
       const endDate = new Date(exportEndDate);
       endDate.setHours(23, 59, 59, 999); // Include the entire end day
       return paymentDate >= startDate && paymentDate <= endDate;
     });
+    
+    // Apply receive payments filter
+    if (!showReceivePayments) {
+      filteredPayments = filteredPayments.filter((payment: any) => payment.status !== 'received');
+    }
 
     if (filteredPayments.length === 0) {
       toast.error("No payments found for the selected date range");
@@ -225,10 +231,18 @@ export default function PaymentsPage() {
               Track and manage all financial transactions
             </p>
           </div>
-          <Button onClick={() => setShowAddDialog(true)}>
-            <PlusCircle className="h-4 w-4 mr-2" />
-            New Payment
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant={showReceivePayments ? "default" : "outline"}
+              onClick={() => setShowReceivePayments(!showReceivePayments)}
+            >
+              {showReceivePayments ? "Hide Received" : "Show Received"}
+            </Button>
+            <Button onClick={() => setShowAddDialog(true)}>
+              <PlusCircle className="h-4 w-4 mr-2" />
+              New Payment
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -295,7 +309,9 @@ export default function PaymentsPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {payments.map((payment: any) => (
+              {payments
+                .filter((payment: any) => showReceivePayments ? true : payment.status !== 'received')
+                .map((payment: any) => (
                 <div key={payment.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
                   <div className="flex-1">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -336,7 +352,7 @@ export default function PaymentsPage() {
                           Issue
                         </Button>
                       )}
-                      {payment.status === 'pending' && (
+                      {payment.status === 'pending' && payment.type === 'trip' && (
                         <Button 
                           size="sm" 
                           variant="secondary"

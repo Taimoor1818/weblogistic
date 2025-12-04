@@ -129,7 +129,7 @@ export default function PaymentPage() {
                             <CreditCard className="h-5 w-5 text-primary" />
                             <CardTitle>Subscription Plan</CardTitle>
                         </div>
-                        <CardDescription>4-month access to all features</CardDescription>
+                        <CardDescription className="text-green-600">4-months access to all feature</CardDescription>
                     </CardHeader>
                     <CardContent className="pt-6">
                         <div className="flex items-baseline gap-2 mb-6">

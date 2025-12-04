@@ -131,9 +131,12 @@ export default function PaymentRequestsPage() {
                                         <div>
                                             <h3 className="font-medium">{request.userName}</h3>
                                             <p className="text-sm text-muted-foreground">{request.userEmail}</p>
-                                            <p className="text-lg font-bold mt-2">₹{request.amount}</p>
+                                            <p className="text-lg font-bold mt-2">SR {request.amount}</p>
                                             <p className="text-sm text-muted-foreground capitalize">
                                                 Status: <span className="font-medium">{request.status}</span>
+                                                {request.status === "approved" && (
+                                                    <span className="ml-2 text-green-500">●</span>
+                                                )}
                                             </p>
                                             <p className="text-xs text-muted-foreground mt-1">
                                                 Requested: {request.requestDate.toDate().toLocaleString()}
