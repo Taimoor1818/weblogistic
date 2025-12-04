@@ -47,10 +47,9 @@ export default function LoginPage() {
             // Use popup to show account selection
             const result = await signInWithPopup(auth, googleProvider);
             if (result.user) {
-                // Store the last login email and UID in localStorage
+                // Store the last login email in localStorage
                 if (result.user.email) {
                     localStorage.setItem("last_login_email", result.user.email);
-                    localStorage.setItem("last_login_uid", result.user.uid);
                 }
                 toast.success("Welcome back!");
                 router.push("/dashboard");

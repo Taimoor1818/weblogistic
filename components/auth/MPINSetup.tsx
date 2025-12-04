@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { hashMPINSHA256 } from "@/lib/encryption";
+import { hashMPIN, hashMPINSHA256 } from "@/lib/encryption";
+import { updateUserDocument } from "@/lib/subscription";
 import { db } from "@/lib/firebase";
 import { doc, setDoc } from "firebase/firestore";
 import { toast } from "react-hot-toast";
@@ -13,13 +14,12 @@ interface MPINSetupProps {
     open: boolean;
     onClose: () => void;
     userId: string;
-    userEmail: string;
     onSuccess?: () => void;
     required?: boolean;
     hasMPIN?: boolean;
 }
 
-export function MPINSetup({ open, onClose, userId, userEmail, onSuccess, required = false, hasMPIN = false }: MPINSetupProps) {
+export function MPINSetup({ open, onClose, userId, onSuccess, required = false, hasMPIN = false }: MPINSetupProps) {
     const [firstPin, setFirstPin] = useState("");
     const [confirmPin, setConfirmPin] = useState("");
     const [loading, setLoading] = useState(false);
@@ -67,15 +67,19 @@ export function MPINSetup({ open, onClose, userId, userEmail, onSuccess, require
 
         setLoading(true);
         try {
-            // Hash MPIN with SHA-256 for mpin_records collection
+            // Hash MPIN with bcrypt for backward compatibility
+            const mpinHash = await hashMPIN(firstPin);
+            
+            // Hash MPIN with SHA-256 for new mpin_records collection
             const sha256Hash = await hashMPINSHA256(firstPin);
             
-            // Store SHA-256 hash in mpin_records collection with email and UID
+            // Update user document with bcrypt hash (backward compatibility)
+            await updateUserDocument(userId, { mpinHash });
+            
+            // Store SHA-256 hash in new mpin_records collection
             const mpinRecordRef = doc(db, "mpin_records", userId);
             await setDoc(mpinRecordRef, {
-                mpin: sha256Hash,
-                email: userEmail,
-                uid: userId,
+                hashedMPIN: sha256Hash,
                 createdAt: new Date(),
                 updatedAt: new Date()
             });
@@ -87,9 +91,9 @@ export function MPINSetup({ open, onClose, userId, userEmail, onSuccess, require
             // Reset state
             setFirstPin("");
             setConfirmPin("");
-        } catch (error: any) {
+        } catch (error) {
             console.error("Error setting MPIN:", error);
-            toast.error(`Failed to set MPIN: ${error.message || "Please try again"}`);
+            toast.error("Failed to set MPIN. Please try again.");
         } finally {
             setLoading(false);
         }

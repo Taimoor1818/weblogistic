@@ -19,20 +19,20 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == userId;
     }
     
-    // Users collection - users can only read/write their own data, admin can read all
+    // Users collection - allow unauthenticated read for MPIN login
     match /users/{userId} {
-      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
-      // Combined rule: Users can update their own profile fields including mpinHash, admins can update subscription-related fields
-      allow update: if (isAuthenticated() && isOwner(userId)) || isAdmin();
-      // Users can create their own document only during registration
+      allow read: if true; // Allow reading for MPIN verification
       allow create: if isAuthenticated() && isOwner(userId) && 
         request.resource.data.keys().hasAll(['uid', 'email', 'displayName']) &&
         request.resource.data.uid == request.auth.uid;
+      allow update: if (isAuthenticated() && isOwner(userId)) || isAdmin();
+      allow delete: if isAdmin();
     }
     
-    // MPIN Records collection - users can only read/write their own MPIN record
+    // MPIN Records collection - allow unauthenticated read for MPIN verification
     match /mpin_records/{userId} {
-      allow read, write: if isAuthenticated() && isOwner(userId);
+      allow read: if true; // Allow reading MPIN records for verification
+      allow write: if isAuthenticated() && isOwner(userId);
     }
     
     // Payment requests - users can create and read their own, admin can manage all

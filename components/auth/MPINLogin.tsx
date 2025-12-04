@@ -3,26 +3,24 @@
 import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { signInWithPopup } from "firebase/auth";
+import { auth, googleProvider, db } from "@/lib/firebase";
+import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { KeyRound, ArrowLeft } from "lucide-react";
+import { hashMPINSHA256 } from "@/lib/encryption";
 
-// Function to hash MPIN with SHA-256
-async function hashMPIN(mpin: string): Promise<string> {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(mpin);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+interface MPINLoginProps {
+    open: boolean;
+    onClose: () => void;
+    onSwitchToGoogle: () => void;
 }
 
-export function MPINLogin({ open, onClose, onSwitchToGoogle }: { open: boolean; onClose: () => void; onSwitchToGoogle: () => void; }) {
+export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(false);
     const [email, setEmail] = useState("");
-    const [uid, setUid] = useState("");
     const [pin, setPin] = useState("");
     const pinRefs = useRef<Array<HTMLInputElement | null>>([]);
     const router = useRouter();
@@ -31,12 +29,8 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: { open: boolean; 
     useEffect(() => {
         // Check if user has logged in before with MPIN
         const savedEmail = localStorage.getItem("last_login_email");
-        const savedUid = localStorage.getItem("last_login_uid");
         if (savedEmail) {
             setEmail(savedEmail);
-        }
-        if (savedUid) {
-            setUid(savedUid);
         }
     }, []);
 
@@ -48,33 +42,9 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: { open: boolean; 
         }
     };
 
-    // Auto-submit with debounce when PIN is entered
-    useEffect(() => {
-        if (pin.length === 4) {
-            // Clear any existing timeout
-            if (debounceTimeout.current) {
-                clearTimeout(debounceTimeout.current);
-            }
-            
-            // Set new timeout for 300ms
-            debounceTimeout.current = setTimeout(() => {
-                handlePinComplete();
-            }, 300);
-        }
-        
-        // Cleanup timeout on unmount
-        return () => {
-            if (debounceTimeout.current) {
-                clearTimeout(debounceTimeout.current);
-            }
-        };
-    }, [pin]);
-
     const handlePinComplete = async () => {
-        // If we don't have email or UID, prompt user to log in with Google first
-        if (!email || !uid) {
-            toast.error("Please login with Google first to set up or use your MPIN.");
-            onSwitchToGoogle();
+        if (!email) {
+            toast.error("Email not found. Please login with Google first.");
             return;
         }
 
@@ -82,9 +52,23 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: { open: boolean; 
         setError(false);
 
         try {
-            // Hash the entered MPIN
-            const hashedEnteredMPIN = await hashMPIN(pin);
-            
+            // Hash the entered MPIN using SHA-256
+            const hashedEnteredMPIN = await hashMPINSHA256(pin);
+
+            // Query Firestore: users collection by email → Get UID
+            const usersRef = collection(db, "users");
+            const q = query(usersRef, where("email", "==", email));
+            const querySnapshot = await getDocs(q);
+
+            if (querySnapshot.empty) {
+                toast.error("No account found with this email. Please login with Google first.");
+                setLoading(false);
+                return;
+            }
+
+            const userDoc = querySnapshot.docs[0];
+            const uid = userDoc.id;
+
             // Query Firestore: mpin_records/{UID} → Get stored hash
             const mpinRecordRef = doc(db, "mpin_records", uid);
             const mpinRecordSnap = await getDoc(mpinRecordRef);
@@ -96,15 +80,22 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: { open: boolean; 
             }
 
             const mpinData = mpinRecordSnap.data();
-            const storedHash = mpinData.mpin; // Using the simpler structure
+            const storedHash = mpinData.hashedMPIN;
 
             // Compare hashed MPIN with stored hash
             if (hashedEnteredMPIN === storedHash) {
-                // ✓ Match → Close dialog and navigate to dashboard
-                // The auth state will be handled by the useAuth hook
-                onClose();
-                toast.success("Welcome back!");
-                router.push("/dashboard");
+                // ✓ Match → Authenticate user with Google and navigate to dashboard
+                try {
+                    // Authenticate with Google to get Firebase auth token
+                    await signInWithPopup(auth, googleProvider);
+                    onClose();
+                    toast.success("Welcome back!");
+                    router.push("/dashboard");
+                } catch (authError: any) {
+                    console.error("Google authentication error:", authError);
+                    toast.error("MPIN verified, but Google authentication failed. Please try again.");
+                    setLoading(false);
+                }
             } else {
                 // ✗ No Match → Show error "Incorrect MPIN"
                 setError(true);
@@ -123,6 +114,28 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: { open: boolean; 
             setLoading(false);
         }
     };
+
+    // Auto-submit with debounce when PIN is entered
+    useEffect(() => {
+        if (pin.length === 4) {
+            // Clear any existing timeout
+            if (debounceTimeout.current) {
+                clearTimeout(debounceTimeout.current);
+            }
+
+            // Set new timeout for 300ms
+            debounceTimeout.current = setTimeout(() => {
+                handlePinComplete();
+            }, 300);
+        }
+
+        // Cleanup timeout on unmount
+        return () => {
+            if (debounceTimeout.current) {
+                clearTimeout(debounceTimeout.current);
+            }
+        };
+    }, [pin]);
 
     const handleClose = () => {
         if (!loading) {
@@ -165,9 +178,8 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: { open: boolean; 
                                         pinRefs.current[index - 1]?.focus();
                                     }
                                 }}
-                                className={`w-12 h-12 text-center text-xl font-bold rounded-lg border-2 ${
-                                    error ? "border-destructive" : "border-border"
-                                } focus:border-primary focus:outline-none`}
+                                className={`w-12 h-12 text-center text-xl font-bold rounded-lg border-2 ${error ? "border-destructive" : "border-border"
+                                    } focus:border-primary focus:outline-none`}
                                 disabled={loading}
                             />
                         ))}
