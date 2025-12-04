@@ -13,8 +13,7 @@ import {
     Package,
     FileText,
     CreditCard,
-    Briefcase,
-    HelpCircle
+    Briefcase
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -92,11 +91,6 @@ export function Sidebar() {
             href: "/dashboard/payments",
             icon: CreditCard,
         },
-        {
-            title: "Help",
-            href: "/dashboard/help",
-            icon: HelpCircle,
-        },
     ];
 
     const adminItems = [
@@ -121,8 +115,8 @@ export function Sidebar() {
         <div className="flex h-full w-64 flex-col border-r bg-card text-card-foreground">
             <div className="flex h-16 items-center border-b px-6">
                 <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl">
-                    <Truck className="h-6 w-6 text-primary" />
-                    <span>{profile?.companyName || "WebLogistic"}</span>
+                    <Truck className="h-6 w-6 text-green-500" />
+                    <span>WebLogistic</span>
                 </Link>
             </div>
             <div className="flex-1 overflow-y-auto py-4">
@@ -136,7 +130,7 @@ export function Sidebar() {
                                 pathname === item.href ? "bg-accent text-accent-foreground" : "text-muted-foreground"
                             )}
                         >
-                            <item.icon className="h-4 w-4" />
+                            <item.icon className="h-4 w-4 text-blue-500" />
                             {item.title}
                         </Link>
                     ))}
@@ -155,7 +149,7 @@ export function Sidebar() {
                                         pathname === item.href ? "bg-accent text-accent-foreground" : "text-muted-foreground"
                                     )}
                                 >
-                                    <item.icon className="h-4 w-4" />
+                                    <item.icon className="h-4 w-4 text-blue-500" />
                                     {item.title}
                                 </Link>
                             ))}

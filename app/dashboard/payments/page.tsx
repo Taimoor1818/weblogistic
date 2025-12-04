@@ -16,7 +16,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
   DollarSign, 
   Truck, 
@@ -27,10 +27,15 @@ import {
   Edit,
   Trash2,
   CreditCard,
-  Fuel
+  Fuel,
+  Download
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "react-hot-toast";
+import { verifyMPIN } from "@/lib/encryption";
+import { exportToExcel } from "@/lib/export";
+import { saveAs } from "file-saver";
+import { useRouter } from "next/navigation";
 
 interface Payment {
   id: string;
@@ -43,6 +48,7 @@ interface Payment {
 }
 
 export default function PaymentsPage() {
+  const router = useRouter();
   const { trips, drivers, vehicles, payments, addPayment, updatePayment, deletePayment, profile } = useStore();
   const [editingPayment, setEditingPayment] = useState<any>(null);
   const [deletePaymentId, setDeletePaymentId] = useState<string | null>(null);
@@ -63,6 +69,12 @@ export default function PaymentsPage() {
     date: new Date().toISOString().split('T')[0],
   });
   
+  // Export date range state
+  const [exportStartDate, setExportStartDate] = useState('');
+  const [exportEndDate, setExportEndDate] = useState('');
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'excel' | 'pdf'>('excel');
+
   // Calculate financial metrics
   // Total Revenue = Received payments from trips
   const totalRevenue = payments
@@ -136,10 +148,16 @@ export default function PaymentsPage() {
     }
   };
 
-  const verifyMpin = (enteredMpin: string) => {
-    // Simple hash comparison (in a real app, you'd use a proper hashing library)
-    const enteredHash = btoa(enteredMpin);
-    return profile?.mpinHash === enteredHash;
+  const verifyMpin = async (enteredMpin: string) => {
+    // Use proper MPIN verification with bcrypt
+    if (!profile?.mpinHash) return false;
+    try {
+      const isValid = await verifyMPIN(enteredMpin, profile.mpinHash);
+      return isValid;
+    } catch (error) {
+      console.error("Error verifying MPIN:", error);
+      return false;
+    }
   };
 
   const handleEditClick = (payment: any) => {
@@ -161,7 +179,8 @@ export default function PaymentsPage() {
   };
 
   const handleMpinSubmit = async () => {
-    if (verifyMpin(mpin)) {
+    const isValid = await verifyMpin(mpin);
+    if (isValid) {
       if (mpinAction === 'edit' && editingPayment) {
         setShowMpinDialog(false);
         // Show edit dialog
@@ -208,6 +227,63 @@ export default function PaymentsPage() {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'overdue': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Handle export with date range
+  const handleExport = async () => {
+    // Filter payments by date range if provided
+    let filteredPayments = [...payments];
+    
+    if (exportStartDate && exportEndDate) {
+      const startDate = new Date(exportStartDate);
+      const endDate = new Date(exportEndDate);
+      endDate.setHours(23, 59, 59, 999); // Include the entire end day
+      
+      filteredPayments = payments.filter(payment => {
+        const paymentDate = new Date(payment.date);
+        return paymentDate >= startDate && paymentDate <= endDate;
+      });
+    }
+    
+    if (filteredPayments.length === 0) {
+      toast.error("No payments found for the selected date range");
+      return;
+    }
+    
+    // Prepare data for export
+    const exportData = filteredPayments.map(payment => ({
+      ID: payment.id,
+      Type: payment.type,
+      Description: payment.description,
+      Amount: payment.amount,
+      Status: payment.status,
+      Date: format(new Date(payment.date), 'yyyy-MM-dd'),
+      RelatedID: payment.relatedId || ''
+    }));
+    
+    if (exportFormat === 'excel') {
+      // Export to Excel
+      exportToExcel(exportData, "Financial_Transactions", "Payments");
+    } else {
+      // For PDF, we'll implement a simple CSV-like export for now
+      // In a real implementation, you would use a PDF library like jsPDF
+      const csvContent = [
+        ['ID', 'Type', 'Description', 'Amount', 'Status', 'Date', 'Related ID'],
+        ...exportData.map(item => [
+          item.ID,
+          item.Type,
+          item.Description,
+          item.Amount,
+          item.Status,
+          item.Date,
+          item.RelatedID
+        ])
+      ].map(row => row.join(',')).join('\n');
+      
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      saveAs(blob, "Financial_Transactions.csv");
+      toast.success("Exported as CSV (PDF library not installed)");
     }
   };
 
@@ -279,8 +355,16 @@ export default function PaymentsPage() {
         <TabsContent value="overview" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Recent Payments</CardTitle>
-              <CardDescription>All financial transactions</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Recent Payments</CardTitle>
+                  <CardDescription>All financial transactions</CardDescription>
+                </div>
+                <Button variant="outline" onClick={() => setShowExportDialog(true)}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
@@ -312,22 +396,25 @@ export default function PaymentsPage() {
                           <div className="flex items-center gap-2">
                             {payment.status === 'pending' && (
                               <div className="flex gap-1">
-                                <Button 
-                                  size="sm" 
-                                  variant="outline" 
-                                  onClick={() => handleReceivePayment(payment.id)}
-                                  className="h-6 px-2 text-xs"
-                                >
-                                  Receive
-                                </Button>
-                                <Button 
-                                  size="sm" 
-                                  variant="outline" 
-                                  onClick={() => handleIssuePayment(payment.id)}
-                                  className="h-6 px-2 text-xs"
-                                >
-                                  Issue
-                                </Button>
+                                {payment.type === 'trip' ? (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    onClick={() => handleReceivePayment(payment.id)}
+                                    className="h-6 px-2 text-xs"
+                                  >
+                                    Receive
+                                  </Button>
+                                ) : (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    onClick={() => handleIssuePayment(payment.id)}
+                                    className="h-6 px-2 text-xs"
+                                  >
+                                    Issue
+                                  </Button>
+                                )}
                               </div>
                             )}
                             <Button 
@@ -422,7 +509,7 @@ export default function PaymentsPage() {
 
         <TabsContent value="reports" className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2">
-            <Card>
+            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push('/dashboard/trips')}>
               <CardHeader>
                 <CardTitle>Income by Source</CardTitle>
               </CardHeader>
@@ -444,12 +531,11 @@ export default function PaymentsPage() {
                     </div>
                   </div>
                   
-
                 </div>
               </CardContent>
             </Card>
             
-            <Card>
+            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push('/dashboard/payments')}>
               <CardHeader>
                 <CardTitle>Expenses by Category</CardTitle>
               </CardHeader>
@@ -518,13 +604,77 @@ export default function PaymentsPage() {
                     </div>
                   </div>
                   
-
                 </div>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
+
       </Tabs>
+      
+      {/* Export Dialog */}
+      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Export Financial Data</DialogTitle>
+            <DialogDescription>
+              Select date range and format for export
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="start-date">Start Date</Label>
+                <Input
+                  id="start-date"
+                  type="date"
+                  value={exportStartDate}
+                  onChange={(e) => setExportStartDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="end-date">End Date</Label>
+                <Input
+                  id="end-date"
+                  type="date"
+                  value={exportEndDate}
+                  onChange={(e) => setExportEndDate(e.target.value)}
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Export Format</Label>
+              <div className="flex gap-2">
+                <Button
+                  variant={exportFormat === 'excel' ? 'default' : 'outline'}
+                  onClick={() => setExportFormat('excel')}
+                  className="flex-1"
+                >
+                  Excel
+                </Button>
+                <Button
+                  variant={exportFormat === 'pdf' ? 'default' : 'outline'}
+                  onClick={() => setExportFormat('pdf')}
+                  className="flex-1"
+                  disabled
+                >
+                  PDF (Coming Soon)
+                </Button>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowExportDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleExport}>
+                Export
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
       
       {/* MPIN Verification Dialog */}
       <Dialog open={showMpinDialog} onOpenChange={setShowMpinDialog}>
