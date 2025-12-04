@@ -9,7 +9,6 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { KeyRound, ArrowLeft } from "lucide-react";
 import { hashMPINSHA256 } from "@/lib/encryption";
-import { signInWithCustomToken } from "firebase/auth";
 
 interface MPINLoginProps {
     open: boolean;
@@ -84,6 +83,7 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
             const mpinRecordDoc = querySnapshot.docs[0];
             const mpinData = mpinRecordDoc.data();
             const userId = mpinData.userId;
+            const userEmail = mpinData.userEmail;
 
             // Get user document to verify existence
             const userDocRef = doc(db, "users", userId);
@@ -100,11 +100,16 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
                 return;
             }
 
-            // TODO: In a real implementation, you would need to sign in the user
-            // This would typically involve calling a backend function to generate a custom token
-            // For now, we'll simulate successful login
+            // Store session data in sessionStorage for MPIN authentication
+            const sessionData = {
+                userId,
+                userEmail,
+                timestamp: Date.now()
+            };
             
-            // Simulate successful login
+            sessionStorage.setItem('mpin_auth_session', JSON.stringify(sessionData));
+
+            // Close the dialog and navigate to dashboard
             onClose();
             toast.success("Welcome back!");
             router.push("/dashboard");

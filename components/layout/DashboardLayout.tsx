@@ -35,7 +35,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         handleRedirectResult();
 
         const unsubscribe = onAuthStateChanged(auth, (user) => {
-            if (!user) {
+            // Check if we have MPIN session authentication
+            const mpinSession = sessionStorage.getItem('mpin_auth_session');
+            if (!user && !mpinSession) {
                 router.push("/login");
             }
         });
@@ -45,49 +47,45 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
     // Handle authentication redirect in useEffect to avoid React warnings
     useEffect(() => {
-        if (!authLoading && !isAuthenticated) {
+        // Check if we have MPIN session authentication
+        const mpinSession = sessionStorage.getItem('mpin_auth_session');
+        if (!authLoading && !isAuthenticated && !mpinSession) {
             router.push("/login");
         }
     }, [authLoading, isAuthenticated, router]);
 
     // Show loading spinner while authenticating or initializing store
     if (authLoading || (!isAuthenticated && !authLoading) || (isAuthenticated && isLoading && !initialized)) {
-        return (
-            <div className="flex h-screen items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mx-auto mb-4"></div>
-                    <p className="text-muted-foreground">Loading dashboard...</p>
-                    <div className="mt-2 text-xs text-muted-foreground">
-                        {authLoading && <span>Authenticating...</span>}
-                        {!authLoading && isAuthenticated && isLoading && !initialized && <span>Initializing data...</span>}
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <div className="flex h-screen overflow-hidden bg-background">
-            <div className="hidden lg:block">
-                <Sidebar />
-            </div>
-            <div className="flex flex-1 flex-col overflow-hidden">
-                <Header />
-                {/* Desktop Header */}
-                <div className="hidden lg:flex h-16 items-center justify-between border-b bg-background px-6">
-                    <div className="flex items-center gap-2">
-                        <h1 className="text-xl font-bold">{profile?.companyName || "WebLogistic"}</h1>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <div className="flex flex-col items-end">
-                            <p className="text-sm font-medium truncate max-w-[200px]">{user?.email || "user@example.com"}</p>
-                            {user?.subscriptionStatus && (
-                                <StatusBadge status={user.subscriptionStatus} showDot={false} className="scale-75 origin-right" />
-                            )}
+        // Check if we have MPIN session authentication
+        const mpinSession = sessionStorage.getItem('mpin_auth_session');
+        if (!mpinSession) {
+            return (
+                <div className="flex h-screen items-center justify-center">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mx-auto mb-4"></div>
+                        <p className="text-muted-foreground">Loading dashboard...</p>
+                        <div className="mt-2 text-xs text-muted-foreground">
+                            {authLoading && <span>Authenticating...</span>}
+                            {!authLoading && isAuthenticated && isLoading && !initialized && <span>Initializing data...</span>}
                         </div>
                     </div>
                 </div>
-                <main className="flex-1 overflow-y-auto p-4 lg:p-8">
+            );
+        }
+    }
+
+    return (
+        <div className="flex h-screen">
+            {/* Desktop sidebar - hidden on mobile */}
+            <div className="hidden lg:block w-64 border-r bg-card">
+                <Sidebar />
+            </div>
+
+            <div className="flex flex-1 flex-col overflow-hidden">
+                {/* Mobile header - hidden on desktop */}
+                <Header />
+
+                <main className="flex-1 overflow-y-auto bg-background">
                     {children}
                 </main>
             </div>

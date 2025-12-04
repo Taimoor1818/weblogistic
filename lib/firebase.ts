@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signOut } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
@@ -19,4 +19,13 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 const googleProvider = new GoogleAuthProvider();
 
-export { auth, db, storage, googleProvider };
+// Custom logout function that also clears MPIN session
+export const customSignOut = async () => {
+  // Clear MPIN session data
+  sessionStorage.removeItem('mpin_auth_session');
+  
+  // Sign out from Firebase
+  await signOut(auth);
+};
+
+export { auth, db, storage, googleProvider, signOut };

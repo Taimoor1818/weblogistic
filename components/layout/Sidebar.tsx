@@ -17,8 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useStore } from "@/store/useStore";
-import { auth } from "@/lib/firebase";
-import { signOut } from "firebase/auth";
+import { customSignOut } from "@/lib/firebase";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -31,7 +30,7 @@ export function Sidebar() {
 
     const handleLogout = async () => {
         try {
-            await signOut(auth);
+            await customSignOut();
             router.push("/login");
             toast.success("Logged out successfully");
         } catch {
