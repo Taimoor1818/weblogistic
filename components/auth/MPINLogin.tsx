@@ -66,15 +66,7 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
 
     const handlePinComplete = async () => {
         if (!email) {
-            toast.error("Email not found. Please login with Google first.");
-            return;
-        }
-
-        // Check if user is already authenticated with Firebase
-        const currentUser = auth.currentUser;
-        if (!currentUser) {
-            toast.error("You must login with Google first before using MPIN.");
-            onSwitchToGoogle();
+            toast.error("Email not found. Please enter your email address.");
             return;
         }
 
@@ -91,7 +83,7 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
             const querySnapshot = await getDocs(q);
 
             if (querySnapshot.empty) {
-                toast.error("No account found with this email. Please login with Google first.");
+                toast.error("No account found with this email. Please sign up first.");
                 setLoading(false);
                 return;
             }
@@ -99,14 +91,6 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
             const userDoc = querySnapshot.docs[0];
             const userData = userDoc.data();
             const uid = userDoc.id;
-
-            // Verify the current user matches the email
-            if (currentUser.uid !== uid) {
-                toast.error("Please login with the correct Google account first.");
-                onSwitchToGoogle();
-                setLoading(false);
-                return;
-            }
 
             // Query Firestore: mpin_records/{UID} → Get stored hash
             const mpinRecordRef = doc(db, "mpin_records", uid);
@@ -123,10 +107,53 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
 
             // Compare hashed MPIN with stored hash
             if (hashedEnteredMPIN === storedHash) {
-                // ✓ Match → User is already authenticated → Navigate to dashboard
-                onClose();
-                toast.success("Welcome back!");
-                router.push("/dashboard");
+                // ✓ MPIN Match → Check if user is already authenticated
+                const currentUser = auth.currentUser;
+
+                if (currentUser && currentUser.email === email) {
+                    // User is already authenticated with correct account
+                    onClose();
+                    toast.success("Welcome back!");
+                    router.push("/dashboard");
+                } else {
+                    // User needs to authenticate with Google
+                    toast.success("MPIN verified! Please confirm your Google account.");
+                    setLoading(false);
+
+                    // Auto-trigger Google Sign-In
+                    try {
+                        const result = await signInWithPopup(auth, googleProvider);
+                        if (result.user && result.user.email === email) {
+                            onClose();
+                            toast.success("Welcome back!");
+                            router.push("/dashboard");
+                        } else if (result.user) {
+                            // Wrong Google account
+                            await auth.signOut();
+                            toast.error(`Please sign in with ${email}`);
+                            setError(true);
+                            setPin("");
+                            setTimeout(() => {
+                                pinRefs.current[0]?.focus();
+                            }, 100);
+                        }
+                    } catch (signInError: any) {
+                        console.error("Google sign-in error:", signInError);
+                        if (signInError.code === 'auth/popup-closed-by-user') {
+                            toast.error("Sign-in cancelled. Please try again.");
+                        } else if (signInError.code === 'auth/popup-blocked') {
+                            toast.error("Popup blocked. Please allow popups and try again.");
+                        } else {
+                            toast.error("Failed to sign in. Please try again.");
+                        }
+                        setError(true);
+                        setPin("");
+                        setTimeout(() => {
+                            pinRefs.current[0]?.focus();
+                        }, 100);
+                    }
+                    return;
+                }
             } else {
                 // ✗ No Match → Show error "Incorrect MPIN"
                 setError(true);
