@@ -30,6 +30,11 @@ service cloud.firestore {
         request.resource.data.uid == request.auth.uid;
     }
     
+    // MPIN Records collection - users can only read/write their own MPIN record
+    match /mpin_records/{userId} {
+      allow read, write: if isAuthenticated() && isOwner(userId);
+    }
+    
     // Payment requests - users can create and read their own, admin can manage all
     match /paymentRequests/{requestId} {
       allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());

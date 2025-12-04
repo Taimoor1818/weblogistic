@@ -9,21 +9,12 @@ import { collection, query, where, getDocs, doc, getDoc } from "firebase/firesto
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { KeyRound, ArrowLeft } from "lucide-react";
-import crypto from "crypto";
+import { hashMPINSHA256 } from "@/lib/encryption";
 
 interface MPINLoginProps {
     open: boolean;
     onClose: () => void;
     onSwitchToGoogle: () => void;
-}
-
-// Function to hash MPIN with SHA-256
-async function hashMPIN(mpin: string): Promise<string> {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(mpin);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
 export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
@@ -58,13 +49,13 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
             if (debounceTimeout.current) {
                 clearTimeout(debounceTimeout.current);
             }
-            
+
             // Set new timeout for 300ms
             debounceTimeout.current = setTimeout(() => {
                 handlePinComplete();
             }, 300);
         }
-        
+
         // Cleanup timeout on unmount
         return () => {
             if (debounceTimeout.current) {
@@ -79,13 +70,21 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
             return;
         }
 
+        // Check if user is already authenticated with Firebase
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+            toast.error("You must login with Google first before using MPIN.");
+            onSwitchToGoogle();
+            return;
+        }
+
         setLoading(true);
         setError(false);
 
         try {
-            // Hash the entered MPIN
-            const hashedEnteredMPIN = await hashMPIN(pin);
-            
+            // Hash the entered MPIN using SHA-256
+            const hashedEnteredMPIN = await hashMPINSHA256(pin);
+
             // Query Firestore: users collection by email → Get UID
             const usersRef = collection(db, "users");
             const q = query(usersRef, where("email", "==", email));
@@ -100,6 +99,14 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
             const userDoc = querySnapshot.docs[0];
             const userData = userDoc.data();
             const uid = userDoc.id;
+
+            // Verify the current user matches the email
+            if (currentUser.uid !== uid) {
+                toast.error("Please login with the correct Google account first.");
+                onSwitchToGoogle();
+                setLoading(false);
+                return;
+            }
 
             // Query Firestore: mpin_records/{UID} → Get stored hash
             const mpinRecordRef = doc(db, "mpin_records", uid);
@@ -116,7 +123,7 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
 
             // Compare hashed MPIN with stored hash
             if (hashedEnteredMPIN === storedHash) {
-                // ✓ Match → Fetch user data → Set session → Navigate to dashboard
+                // ✓ Match → User is already authenticated → Navigate to dashboard
                 onClose();
                 toast.success("Welcome back!");
                 router.push("/dashboard");
@@ -180,9 +187,8 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
                                         pinRefs.current[index - 1]?.focus();
                                     }
                                 }}
-                                className={`w-12 h-12 text-center text-xl font-bold rounded-lg border-2 ${
-                                    error ? "border-destructive" : "border-border"
-                                } focus:border-primary focus:outline-none`}
+                                className={`w-12 h-12 text-center text-xl font-bold rounded-lg border-2 ${error ? "border-destructive" : "border-border"
+                                    } focus:border-primary focus:outline-none`}
                                 disabled={loading}
                             />
                         ))}
