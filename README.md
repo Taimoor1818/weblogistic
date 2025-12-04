@@ -22,22 +22,21 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 ## Environment Variables
 
-Create a `.env.local` file in the root directory with the following variables:
+Create a `.env.local` file in the root directory with your Firebase configuration values. You can use `.env.example` as a template:
 
-```
-NEXT_PUBLIC_FIREBASE_API_KEY=
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
-NEXT_PUBLIC_FIREBASE_APP_ID=
-NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=
+```bash
+# Copy the example file
+ cp .env.example .env.local
+ 
+# Then edit .env.local with your actual Firebase credentials
 ```
 
 **Important Security Notes:**
 - Never commit `.env.local` or any other environment files containing secrets to version control
 - All environment variables are properly ignored in `.gitignore`
 - For production deployment, set environment variables in your hosting platform (e.g., Vercel)
+- The `.env.example` file contains placeholders and is safe to commit
+- Always use environment variables for sensitive configuration data
 
 ## Learn More
 
