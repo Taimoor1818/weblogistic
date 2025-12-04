@@ -8,7 +8,7 @@ import { collection, query, where, getDocs, doc, getDoc } from "firebase/firesto
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { KeyRound, ArrowLeft } from "lucide-react";
-import { hashMPINSHA256 } from "@/lib/encryption";
+import { hashMPINSHA256 } from "@/lib/client-encryption";
 
 interface MPINLoginProps {
     open: boolean;

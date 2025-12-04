@@ -101,18 +101,34 @@ export default function LoginPage() {
 
     return (
         <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900">
+            {/* Video Background */}
+            <div className="absolute inset-0 z-0">
+                <video
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="h-full w-full object-cover opacity-60"
+                >
+                    <source src="/videos/video1.mp4" type="video/mp4" />
+                    Your browser does not support the video tag.
+                </video>
+                {/* Overlay gradient to ensure text readability */}
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
+            </div>
+
             <motion.div
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.2 }}
-                className="z-10 w-full max-w-md space-y-8 rounded-2xl p-8 backdrop-blur-sm bg-black/30"
+                className="z-10 w-full max-w-md space-y-8 rounded-2xl p-8 backdrop-blur-md bg-black/40 border border-white/10 shadow-2xl"
             >
                 <div className="flex flex-col items-center text-center">
-                    <div className="mb-4 rounded-full bg-primary/10 p-4">
+                    <div className="mb-4 rounded-full bg-primary/20 p-4 ring-1 ring-white/20">
                         <Truck className="h-10 w-10 text-primary" />
                     </div>
-                    <h1 className="text-3xl font-bold tracking-tight text-white">WebLogistic</h1>
-                    <p className="mt-2 text-white/80">
+                    <h1 className="text-3xl font-bold tracking-tight text-white drop-shadow-md">WebLogistic</h1>
+                    <p className="mt-2 text-white/90 font-medium">
                         Your complete logistics command center.
                     </p>
                 </div>
@@ -120,7 +136,7 @@ export default function LoginPage() {
                 <div className="space-y-3">
                     <Button
                         variant="outline"
-                        className="w-full py-6 text-lg font-medium transition-all hover:scale-[1.02] bg-white/20 border-white/30 text-white hover:bg-white/30 hover:border-white/50"
+                        className="w-full py-6 text-lg font-medium transition-all hover:scale-[1.02] bg-white/20 border-white/30 text-white hover:bg-white/30 hover:border-white/50 shadow-lg"
                         onClick={handleLogin}
                         disabled={loading}
                         type="button"
@@ -153,7 +169,7 @@ export default function LoginPage() {
                     </Button>
 
                     {loading && (
-                        <p className="text-center text-sm text-white/80">
+                        <p className="text-center text-sm text-white/90 font-medium bg-black/20 rounded-md py-1">
                             Please check your browser for the authentication popup
                         </p>
                     )}
@@ -163,13 +179,13 @@ export default function LoginPage() {
                             <span className="w-full border-t border-white/30" />
                         </div>
                         <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-transparent px-2 text-white/80">Or</span>
+                            <span className="bg-transparent px-2 text-white/90 font-bold shadow-sm">Or</span>
                         </div>
                     </div>
 
                     <Button
                         variant="ghost"
-                        className="w-full py-6 text-lg font-medium transition-all hover:scale-[1.02] bg-white/10 text-white hover:bg-white/20"
+                        className="w-full py-6 text-lg font-medium transition-all hover:scale-[1.02] bg-white/10 text-white hover:bg-white/20 border border-white/10 shadow-lg"
                         onClick={() => setShowMPINLogin(true)}
                         disabled={loading}
                     >
@@ -180,14 +196,14 @@ export default function LoginPage() {
                     {/* Download PWA Button */}
                     <Button
                         variant="ghost"
-                        className="w-full py-6 text-lg font-medium transition-all hover:scale-[1.02] bg-white/10 text-white hover:bg-white/20 mt-4"
+                        className="w-full py-6 text-lg font-medium transition-all hover:scale-[1.02] bg-white/10 text-white hover:bg-white/20 mt-4 border border-white/10 shadow-lg"
                         onClick={handleDownloadApp}
                     >
                         <Download className="h-5 w-5 mr-2" />
                         Install App
                     </Button>
 
-                    <p className="text-center text-xs text-white/70">
+                    <p className="text-center text-xs text-white/80 mt-4">
                         By continuing, you agree to our Terms of Service and Privacy Policy.
                     </p>
                 </div>

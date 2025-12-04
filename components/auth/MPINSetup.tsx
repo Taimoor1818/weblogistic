@@ -7,7 +7,7 @@ import { toast } from "react-hot-toast";
 import { KeyRound, Check } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, setDoc } from "firebase/firestore";
-import { hashMPINSHA256 } from "@/lib/encryption";
+import { hashMPINSHA256 } from "@/lib/client-encryption";
 
 interface MPINSetupProps {
     open: boolean;
