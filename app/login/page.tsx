@@ -6,15 +6,14 @@ import { auth, googleProvider } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { Truck, KeyRound, Download } from "lucide-react";
+import { Truck, Download } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { MPINLogin } from "@/components/auth/MPINLogin";
 
 export default function LoginPage() {
     const [loading, setLoading] = useState(false);
-    const [showMPINLogin, setShowMPINLogin] = useState(false);
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
     const [isIOS, setIsIOS] = useState(false);
+    const [isStandalone, setIsStandalone] = useState(false);
     const router = useRouter();
 
     // Check for PWA installation support
@@ -32,7 +31,14 @@ export default function LoginPage() {
             return /iphone|ipad|ipod/.test(userAgent);
         };
 
+        // Check if app is already installed (running in standalone mode)
+        const checkStandalone = () => {
+            return window.matchMedia('(display-mode: standalone)').matches || 
+                   (window.navigator as any).standalone === true;
+        };
+
         setIsIOS(checkIOS());
+        setIsStandalone(checkStandalone());
 
         window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
@@ -72,6 +78,11 @@ export default function LoginPage() {
     };
 
     const handleDownloadApp = async () => {
+        if (isStandalone) {
+            toast.success("App is already installed!");
+            return;
+        }
+        
         if (deferredPrompt) {
             // Show the install prompt
             deferredPrompt.prompt();
@@ -81,7 +92,7 @@ export default function LoginPage() {
             setDeferredPrompt(null);
             
             if (outcome === 'accepted') {
-                toast.success("App installation started! Check your desktop/mobile home screen for the shortcut.");
+                toast.success("App installation started! Check your desktop for the shortcut.");
             } else {
                 toast.success("Installation cancelled. You can try again later.");
             }
@@ -90,7 +101,17 @@ export default function LoginPage() {
             if (isIOS) {
                 toast.success("To install this app on iOS: Tap the Share button, then select 'Add to Home Screen'.");
             } else {
-                toast.success("To install this app: Look for the install option in your browser's address bar or menu.");
+                // For desktop browsers - provide specific instructions based on browser
+                const userAgent = navigator.userAgent;
+                if (userAgent.includes('Chrome')) {
+                    toast.success("To install this app: Click the install icon (⊕) in Chrome's address bar, or go to Menu > More Tools > Create Shortcut.");
+                } else if (userAgent.includes('Firefox')) {
+                    toast.success("To install this app: Firefox doesn't support PWA installation directly. Use Chrome or Edge for best experience.");
+                } else if (userAgent.includes('Edg')) {
+                    toast.success("To install this app: Click the install icon (⊕) in Edge's address bar, or go to Menu > Apps > Install this site as an app.");
+                } else {
+                    toast.success("To install this app: Look for an install option in your browser's menu or address bar.");
+                }
             }
         }
     };
@@ -168,25 +189,6 @@ export default function LoginPage() {
                         </p>
                     )}
 
-                    <div className="relative">
-                        <div className="absolute inset-0 flex items-center">
-                            <span className="w-full border-t border-white/30" />
-                        </div>
-                        <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-transparent px-2 text-white/80">Or</span>
-                        </div>
-                    </div>
-
-                    <Button
-                        variant="ghost"
-                        className="w-full py-6 text-lg font-medium transition-all hover:scale-[1.02] bg-white/10 text-white hover:bg-white/20"
-                        onClick={() => setShowMPINLogin(true)}
-                        disabled={loading}
-                    >
-                        <KeyRound className="h-5 w-5 mr-2" />
-                        Login with MPIN
-                    </Button>
-
                     {/* Download PWA Button */}
                     <Button
                         variant="ghost"
@@ -202,15 +204,6 @@ export default function LoginPage() {
                     </p>
                 </div>
             </motion.div>
-
-            <MPINLogin
-                open={showMPINLogin}
-                onClose={() => setShowMPINLogin(false)}
-                onSwitchToGoogle={() => {
-                    setShowMPINLogin(false);
-                    handleLogin();
-                }}
-            />
         </div>
     );
 }
