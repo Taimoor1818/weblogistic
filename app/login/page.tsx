@@ -15,7 +15,25 @@ export default function LoginPage() {
     const [showMPINLogin, setShowMPINLogin] = useState(false);
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
     const [isIOS, setIsIOS] = useState(false);
+    const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
     const router = useRouter();
+
+    // Video playlist with all four videos
+    const videos = [
+        "/videos/v1.mp4",
+        "/videos/v2.mp4",
+        "/videos/v3.mp4",
+        "/videos/v4.mp4"
+    ];
+
+    // Rotate videos every 5 seconds
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setCurrentVideoIndex(prevIndex => (prevIndex + 1) % videos.length);
+        }, 5000); // Change video every 5 seconds
+
+        return () => clearInterval(interval);
+    }, [videos.length]);
 
     // Check for PWA installation support
     useEffect(() => {
@@ -104,13 +122,14 @@ export default function LoginPage() {
             {/* Video Background */}
             <div className="absolute inset-0 z-0 overflow-hidden">
                 <video 
+                    key={currentVideoIndex}
                     autoPlay 
                     loop 
                     muted 
                     playsInline
                     className="min-h-full min-w-full object-cover brightness-50"
                 >
-                    <source src="/videos/v1.mp4" type="video/mp4" />
+                    <source src={videos[currentVideoIndex]} type="video/mp4" />
                     Your browser does not support the video tag.
                 </video>
             </div>
@@ -119,7 +138,7 @@ export default function LoginPage() {
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.2 }}
-                className="z-10 w-full max-w-md space-y-8 rounded-2xl p-8 backdrop-blur-xl"
+                className="z-10 w-full max-w-md space-y-8 rounded-2xl p-8 backdrop-blur-xl bg-black/20"
             >
                 <div className="flex flex-col items-center text-center">
                     <div className="mb-4 rounded-full bg-primary/10 p-4">
