@@ -11,11 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "react-hot-toast";
-import { 
-  PlusCircle, 
-  Edit3, 
-  Trash2, 
-  DollarSign, 
+import {
+  PlusCircle,
+  Edit3,
+  Trash2,
+  DollarSign,
   Calendar,
   User,
   Download,
@@ -62,7 +62,7 @@ export default function PaymentsPage() {
     date: new Date().toISOString().split('T')[0],
     employeeId: ''
   });
-  
+
   // Export date range state
   const [exportStartDate, setExportStartDate] = useState('');
   const [exportEndDate, setExportEndDate] = useState('');
@@ -71,20 +71,20 @@ export default function PaymentsPage() {
   const paymentStats = useMemo(() => {
     const issuedPayments = payments.filter((p: any) => p.status === 'paid');
     const receivedPayments = payments.filter((p: any) => p.status === 'received');
-    
+
     // Total revenue from received trip payments
     const totalRevenue = receivedPayments
       .filter((p: any) => p.type === 'trip')
       .reduce((sum: number, p: any) => sum + p.amount, 0);
-    
+
     // Total expenses from paid non-trip payments
     const totalExpenses = issuedPayments
       .filter((p: any) => p.type !== 'trip')
       .reduce((sum: number, p: any) => sum + p.amount, 0);
-    
+
     // Net profit
     const netProfit = totalRevenue - totalExpenses;
-    
+
     return {
       issuedCount: issuedPayments.length,
       totalRevenue,
@@ -237,7 +237,7 @@ export default function PaymentsPage() {
     }));
 
     exportToExcel(
-      exportData, 
+      exportData,
       `payments_${exportStartDate}_to_${exportEndDate}`,
       "Payments",
       "WebLojistic Payments Report"
@@ -248,7 +248,7 @@ export default function PaymentsPage() {
   const revenueData = useMemo(() => {
     const tripPayments = payments.filter((p: any) => p.type === 'trip' && p.status === 'received');
     const totalAmount = tripPayments.reduce((sum: number, p: any) => sum + p.amount, 0);
-    
+
     return {
       totalAmount,
       count: tripPayments.length
@@ -258,7 +258,7 @@ export default function PaymentsPage() {
   const expenseData = useMemo(() => {
     const expensePayments = payments.filter((p: any) => p.type !== 'trip' && p.status === 'paid');
     const totalAmount = expensePayments.reduce((sum: number, p: any) => sum + p.amount, 0);
-    
+
     // Group by type
     const byType: Record<string, { count: number; amount: number }> = {};
     expensePayments.forEach((p: any) => {
@@ -268,7 +268,7 @@ export default function PaymentsPage() {
       byType[p.type].count += 1;
       byType[p.type].amount += p.amount;
     });
-    
+
     return {
       totalAmount,
       count: expensePayments.length,
@@ -333,7 +333,7 @@ export default function PaymentsPage() {
                 <p className="text-xs text-muted-foreground">Payments issued</p>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
@@ -344,7 +344,7 @@ export default function PaymentsPage() {
                 <p className="text-xs text-muted-foreground">From trip payments</p>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
@@ -355,7 +355,7 @@ export default function PaymentsPage() {
                 <p className="text-xs text-muted-foreground">Salaries & expenses</p>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Net Profit</CardTitle>
@@ -428,8 +428,8 @@ export default function PaymentsPage() {
                         </div>
                         <div className="flex flex-col sm:flex-row gap-2">
                           {payment.status === 'pending' && (
-                            <Button 
-                              size="sm" 
+                            <Button
+                              size="sm"
                               onClick={() => handleIssuePayment(payment.id)}
                               className="bg-green-600 hover:bg-green-700"
                             >
@@ -437,24 +437,24 @@ export default function PaymentsPage() {
                             </Button>
                           )}
                           {payment.status === 'paid' && payment.type === 'trip' && (
-                            <Button 
-                              size="sm" 
+                            <Button
+                              size="sm"
                               onClick={() => handleCompletePayment(payment.id)}
                               className="bg-blue-600 hover:bg-blue-700"
                             >
                               Complete
                             </Button>
                           )}
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
+                          <Button
+                            size="sm"
+                            variant="outline"
                             onClick={() => handleEditClick(payment)}
                           >
                             <Edit3 className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
+                          <Button
+                            size="sm"
+                            variant="outline"
                             className="text-destructive hover:text-destructive hover:bg-destructive/10"
                             onClick={() => handleDeleteClick(payment.id)}
                           >
@@ -570,8 +570,8 @@ export default function PaymentsPage() {
                         </div>
                         <div className="flex flex-col sm:flex-row gap-2">
                           {payment.status === 'pending' && (
-                            <Button 
-                              size="sm" 
+                            <Button
+                              size="sm"
                               onClick={() => handleIssuePayment(payment.id)}
                               className="bg-green-600 hover:bg-green-700"
                             >
@@ -579,24 +579,24 @@ export default function PaymentsPage() {
                             </Button>
                           )}
                           {payment.status === 'paid' && payment.type === 'trip' && (
-                            <Button 
-                              size="sm" 
+                            <Button
+                              size="sm"
                               onClick={() => handleCompletePayment(payment.id)}
                               className="bg-blue-600 hover:bg-blue-700"
                             >
                               Complete
                             </Button>
                           )}
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
+                          <Button
+                            size="sm"
+                            variant="outline"
                             onClick={() => handleEditClick(payment)}
                           >
                             <Edit3 className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
+                          <Button
+                            size="sm"
+                            variant="outline"
                             className="text-destructive hover:text-destructive hover:bg-destructive/10"
                             onClick={() => handleDeleteClick(payment.id)}
                           >
@@ -748,7 +748,7 @@ export default function PaymentsPage() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="grid gap-2">
               <Label htmlFor="edit-description">Description</Label>
               <Input
@@ -758,7 +758,7 @@ export default function PaymentsPage() {
                 placeholder="Enter description"
               />
             </div>
-            
+
             <div className="grid gap-2">
               <Label htmlFor="edit-amount">Amount ({getCurrencySymbol(settings.currency)})</Label>
               <Input
@@ -769,7 +769,7 @@ export default function PaymentsPage() {
                 placeholder="Enter amount"
               />
             </div>
-            
+
             <div className="grid gap-2">
               <Label htmlFor="edit-date">Date</Label>
               <Input
@@ -779,7 +779,7 @@ export default function PaymentsPage() {
                 onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
               />
             </div>
-            
+
             {(editForm.type === 'salary') && (
               <div className="grid gap-2">
                 <Label htmlFor="edit-employee">Employee</Label>
@@ -801,7 +801,7 @@ export default function PaymentsPage() {
                 </Select>
               </div>
             )}
-            
+
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowEditDialog(false)}>
                 Cancel
@@ -842,7 +842,7 @@ export default function PaymentsPage() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="grid gap-2">
               <Label htmlFor="add-description">Description</Label>
               <Input
@@ -852,7 +852,7 @@ export default function PaymentsPage() {
                 placeholder="Enter description"
               />
             </div>
-            
+
             <div className="grid gap-2">
               <Label htmlFor="add-amount">Amount ({getCurrencySymbol(settings.currency)})</Label>
               <Input
@@ -863,7 +863,7 @@ export default function PaymentsPage() {
                 placeholder="Enter amount"
               />
             </div>
-            
+
             <div className="grid gap-2">
               <Label htmlFor="add-date">Date</Label>
               <Input
@@ -873,7 +873,7 @@ export default function PaymentsPage() {
                 onChange={(e) => setNewPayment({ ...newPayment, date: e.target.value })}
               />
             </div>
-            
+
             {(newPayment.type === 'salary') && (
               <div className="grid gap-2">
                 <Label htmlFor="add-employee">Employee</Label>
