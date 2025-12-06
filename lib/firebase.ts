@@ -14,6 +14,16 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
+// Safety check for build environment
+if (typeof window === "undefined" && !firebaseConfig.apiKey) {
+  console.warn("Firebase API keys missing in server environment. Using mock config for build.");
+  // Provide string values to satisfy Firebase initialization type checks during build
+  Object.keys(firebaseConfig).forEach((key) => {
+    // @ts-ignore
+    if (!firebaseConfig[key]) firebaseConfig[key] = "mock-value-for-build";
+  });
+}
+
 // Initialize Firebase
 const app: FirebaseApp = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth: Auth = getAuth(app);
