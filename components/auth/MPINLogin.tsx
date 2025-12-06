@@ -145,7 +145,17 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
             router.push("/dashboard");
         } catch (error: any) {
             console.error("Error verifying MPIN:", error);
-            toast.error(`Failed to login: ${error.message || "Please try again"}`);
+            const errorMessage = error.message || "Please try again";
+
+            // Provide specific error messages for common issues
+            if (errorMessage.includes("Web Crypto API")) {
+                toast.error("Browser not supported. Please use Chrome, Firefox, or Edge.");
+            } else if (errorMessage.includes("permission")) {
+                toast.error("Permission denied. Please contact support.");
+            } else {
+                toast.error(`Failed to login: ${errorMessage}`);
+            }
+
             setError(true);
             setPin("");
             setTimeout(() => {

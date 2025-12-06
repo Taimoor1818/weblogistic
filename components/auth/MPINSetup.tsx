@@ -123,8 +123,19 @@ export function MPINSetup({ open, onClose, userId, userEmail, onSuccess, require
                 toast.success(hasMPIN ? "MPIN updated successfully!" : "MPIN set successfully!");
             } catch (err: any) {
                 console.error("Error setting MPIN:", err);
-                setError(err.message || "Failed to set MPIN. Please try again.");
-                toast.error("Failed to set MPIN. Please try again.");
+                const errorMessage = err.message || "Failed to set MPIN. Please try again.";
+
+                // Provide specific error messages for common issues
+                if (errorMessage.includes("Web Crypto API")) {
+                    setError("Your browser doesn't support secure encryption. Please use a modern browser.");
+                    toast.error("Browser not supported. Please use Chrome, Firefox, or Edge.");
+                } else if (errorMessage.includes("permission")) {
+                    setError("Permission denied. Please check your Firebase security rules.");
+                    toast.error("Permission denied. Please contact support.");
+                } else {
+                    setError(errorMessage);
+                    toast.error(errorMessage);
+                }
             } finally {
                 setLoading(false);
             }

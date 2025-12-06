@@ -101,8 +101,18 @@ export function MPINVerify({ open, onClose, onSuccess, title = "Verify MPIN", de
             }
         } catch (error: any) {
             console.error("Error verifying MPIN:", error);
+            const errorMessage = error.message || "Failed to verify MPIN. Please try again.";
+
+            // Provide specific error messages for common issues
+            if (errorMessage.includes("Web Crypto API")) {
+                toast.error("Browser not supported. Please use Chrome, Firefox, or Edge.");
+            } else if (errorMessage.includes("permission")) {
+                toast.error("Permission denied. Please contact support.");
+            } else {
+                toast.error(errorMessage);
+            }
+
             setError(true);
-            toast.error(error.message || "Failed to verify MPIN. Please try again.");
             setPin("");
             setTimeout(() => {
                 pinRefs.current[0]?.focus();
