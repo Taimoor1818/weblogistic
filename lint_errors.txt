@@ -1,0 +1,146 @@
+﻿
+> weblojistic@0.1.0 lint
+> eslint
+
+
+C:\Users\DELL\Desktop\weblojistic\app\admin\page.tsx
+  68:34  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  82:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\Desktop\weblojistic\app\admin\payment-requests\page.tsx
+  53:34  warning  'pin' is defined but never used           @typescript-eslint/no-unused-vars
+  65:32  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\Desktop\weblojistic\app\dashboard\all-users\page.tsx
+  118:57  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\DELL\Desktop\weblojistic\app\dashboard\employees\[id]\salary-history\page.tsx
+  24:46  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  31:9   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\DELL\Desktop\weblojistic\app\dashboard\employees\[id]\salary-history\page.tsx:31:9
+  29 |         // Find the employee by ID
+  30 |         const foundEmployee = employees.find(emp => emp.id === employeeId);
+> 31 |         setEmployee(foundEmployee);
+     |         ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  32 |     }, [employeeId, employees]);
+  33 |     
+  34 |     // Filter payments for this employee  react-hooks/set-state-in-effect
+
+C:\Users\DELL\Desktop\weblojistic\app\dashboard\payments\page.tsx
+   31:11   warning  'Payment' is defined but never used            @typescript-eslint/no-unused-vars
+   43:11   warning  'trips' is assigned a value but never used     @typescript-eslint/no-unused-vars
+   43:18   warning  'drivers' is assigned a value but never used   @typescript-eslint/no-unused-vars
+   43:27   warning  'vehicles' is assigned a value but never used  @typescript-eslint/no-unused-vars
+   43:100  warning  'profile' is assigned a value but never used   @typescript-eslint/no-unused-vars
+   45:56   error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+   72:48   error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+   73:50   error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+   77:19   error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+   78:32   error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+   82:19   error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+   83:32   error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+  123:47   error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+  134:47   error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+  144:37   error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+  163:35   warning  'pin' is defined but never used                @typescript-eslint/no-unused-vars
+  217:56   error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+  230:55   error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+  236:57   error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+  249:46   error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+  250:62   error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+  259:49   error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+  260:65   error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+  264:33   error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+  398:49   error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+  419:53   error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+  540:43   error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+  561:53   error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+  737:85   error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+  795:47   error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+  831:89   error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+  889:47   error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\Desktop\weblojistic\app\dashboard\team\page.tsx
+   4:16  warning  'CardContent' is defined but never used  @typescript-eslint/no-unused-vars
+  10:37  warning  'where' is defined but never used        @typescript-eslint/no-unused-vars
+  13:35  warning  'Mail' is defined but never used         @typescript-eslint/no-unused-vars
+  62:35  warning  'pin' is defined but never used          @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\Desktop\weblojistic\app\dashboard\trips\create\page.tsx
+  20:7  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\DELL\Desktop\weblojistic\app\dashboard\trips\create\page.tsx:20:7
+  18 |     // Check if we have the required data to create a shipment
+  19 |     if (drivers.length > 0 && vehicles.length > 0 && customers.length > 0) {
+> 20 |       setShowDialog(true);
+     |       ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  21 |     }
+  22 |   }, [drivers.length, vehicles.length, customers.length]);
+  23 |  react-hooks/set-state-in-effect
+
+C:\Users\DELL\Desktop\weblojistic\app\login\page.tsx
+  16:58  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  57:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\Desktop\weblojistic\components\auth\MPINLogin.tsx
+    6:10  warning  'auth' is defined but never used                                                                                      @typescript-eslint/no-unused-vars
+   55:8   warning  React Hook useEffect has a missing dependency: 'handlePinComplete'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  146:25  error    Unexpected any. Specify a different type                                                                              @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\Desktop\weblojistic\components\auth\MPINSetup.tsx
+   22:74  warning  'required' is assigned a value but never used                                                                    @typescript-eslint/no-unused-vars
+  124:27  error    Unexpected any. Specify a different type                                                                         @typescript-eslint/no-explicit-any
+  153:8   warning  React Hook useEffect has a missing dependency: 'handleSubmit'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\DELL\Desktop\weblojistic\components\auth\MPINVerify.tsx
+   70:8   warning  React Hook useEffect has a missing dependency: 'handlePinComplete'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  102:25  error    Unexpected any. Specify a different type                                                                              @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\Desktop\weblojistic\components\dashboard\DashboardWidgets.tsx
+   7:26  warning  'FileText' is defined but never used          @typescript-eslint/no-unused-vars
+  12:13  warning  'trips' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  12:20  warning  'drivers' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  23:52  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  26:52  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  29:54  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  30:50  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  34:25  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  35:38  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  39:25  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  40:38  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\Desktop\weblojistic\components\drivers\DriverDialog.tsx
+  17:10  warning  'toast' is defined but never used             @typescript-eslint/no-unused-vars
+  27:38  warning  'profile' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\Desktop\weblojistic\components\layout\Sidebar.tsx
+  30:13  warning  'profile' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\Desktop\weblojistic\components\trips\TripDialog.tsx
+  5:16  warning  'Driver' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\Desktop\weblojistic\lib\export.ts
+  45:29  warning  'index' is defined but never used         @typescript-eslint/no-unused-vars
+  53:43  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\Desktop\weblojistic\lib\firebase.ts
+  25:5  warning  'analytics' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\Desktop\weblojistic\public\sw.js
+  54:40  warning  'event' is defined but never used  @typescript-eslint/no-unused-vars
+
+Γ£û 73 problems (46 errors, 27 warnings)
+

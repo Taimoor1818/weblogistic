@@ -17,6 +17,7 @@ export default function CreateShipmentPage() {
   useEffect(() => {
     // Check if we have the required data to create a shipment
     if (drivers.length > 0 && vehicles.length > 0 && customers.length > 0) {
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       setShowDialog(true);
     }
   }, [drivers.length, vehicles.length, customers.length]);
@@ -65,7 +66,7 @@ export default function CreateShipmentPage() {
       </Card>
 
       {/* Hidden TripDialog that opens automatically */}
-      <TripDialog 
+      <TripDialog
         open={showDialog}
         onOpenChange={(open: boolean) => {
           if (!open) handleDialogClose();

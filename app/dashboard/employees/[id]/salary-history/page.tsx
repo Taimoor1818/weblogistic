@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useStore } from "@/store/useStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,28 +21,23 @@ export default function EmployeeSalaryHistoryPage() {
     const router = useRouter();
     const params = useParams();
     const { employees, payments, settings } = useStore();
-    const [employee, setEmployee] = useState<any>(null);
-    
+
     const employeeId = params.id as string;
-    
-    useEffect(() => {
-        // Find the employee by ID
-        const foundEmployee = employees.find(emp => emp.id === employeeId);
-        setEmployee(foundEmployee);
-    }, [employeeId, employees]);
-    
+    // Find the employee by ID directly from store
+    const employee = employees.find(emp => emp.id === employeeId);
+
     // Filter payments for this employee
-    const employeePayments = payments.filter(payment => 
+    const employeePayments = payments.filter(payment =>
         payment.type === 'salary' && payment.employeeId === employeeId
     );
-    
+
     // Calculate total salary paid to this employee
     const totalSalaryPaid = employeePayments
         .filter(payment => payment.status === 'paid')
         .reduce((sum, payment) => sum + payment.amount, 0);
-    
+
     const lastPaymentDate = employeePayments.length > 0 ? employeePayments[employeePayments.length - 1].date : null;
-    
+
     if (!employee) {
         return (
             <div className="flex min-h-screen items-center justify-center">
@@ -50,7 +45,7 @@ export default function EmployeeSalaryHistoryPage() {
             </div>
         );
     }
-    
+
     return (
         <div className="container mx-auto py-8 px-4">
             <div className="mb-6">
@@ -75,7 +70,7 @@ export default function EmployeeSalaryHistoryPage() {
                         <p className="text-xs text-muted-foreground">All time salary payments</p>
                     </CardContent>
                 </Card>
-                
+
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Monthly Salary</CardTitle>
@@ -86,7 +81,7 @@ export default function EmployeeSalaryHistoryPage() {
                         <p className="text-xs text-muted-foreground">Per {employee?.salaryType}</p>
                     </CardContent>
                 </Card>
-                
+
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Payment Count</CardTitle>
@@ -97,7 +92,7 @@ export default function EmployeeSalaryHistoryPage() {
                         <p className="text-xs text-muted-foreground">Total payments made</p>
                     </CardContent>
                 </Card>
-                
+
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Last Payment</CardTitle>
@@ -111,7 +106,7 @@ export default function EmployeeSalaryHistoryPage() {
                     </CardContent>
                 </Card>
             </div>
-            
+
             <Card>
                 <CardHeader>
                     <CardTitle>Salary Payment History</CardTitle>
@@ -142,8 +137,8 @@ export default function EmployeeSalaryHistoryPage() {
                                         <TableCell>
                                             <Badge className={
                                                 payment.status === 'paid' ? 'bg-green-100 text-green-800' :
-                                                payment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                                'bg-gray-100 text-gray-800'
+                                                    payment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                                        'bg-gray-100 text-gray-800'
                                             }>
                                                 {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
                                             </Badge>

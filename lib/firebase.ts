@@ -22,7 +22,6 @@ const db: Firestore = getFirestore(app);
 const storage: FirebaseStorage = getStorage(app);
 
 // Initialize Analytics (only in browser)
-let analytics;
 if (typeof window !== "undefined") {
   // We need to import getAnalytics conditionally or updated imports
   // For now, let's just initialize what we have. 
