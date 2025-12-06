@@ -30,15 +30,15 @@ interface StoreState extends AppData {
     addTrip: (trip: Omit<Trip, 'id'>) => Promise<void>;
     updateTrip: (trip: Trip) => Promise<void>;
     deleteTrip: (tripId: string) => Promise<void>;
-    
+
     addPayment: (payment: Omit<Payment, 'id'>) => Promise<void>;
     updatePayment: (payment: Payment) => Promise<void>;
     deletePayment: (paymentId: string) => Promise<void>;
-    
+
     addEmployee: (employee: Omit<Employee, 'id'>) => Promise<void>;
     updateEmployee: (employee: Employee) => Promise<void>;
     deleteEmployee: (employeeId: string) => Promise<void>;
-    
+
     // Add this new function declaration
     updateSettings: (settings: Partial<AppData['settings']>) => Promise<void>;
 }
@@ -77,7 +77,7 @@ export const useStore = create<StoreState>((set, get) => ({
         const auth = getAuth();
         const isFirebaseAuthenticated = !!auth.currentUser;
         const isMPINAuthenticated = typeof window !== 'undefined' && localStorage.getItem('mpin_authenticated_user') === uid;
-        
+
         if (!isFirebaseAuthenticated && !isMPINAuthenticated) {
             console.warn('User not authenticated, skipping store initialization');
             set({ isLoading: false });
@@ -146,7 +146,7 @@ export const useStore = create<StoreState>((set, get) => ({
                 set({ trips });
             });
             unsubscribers.push(tripsUnsub);
-            
+
             // Fetch payments from user's payments subcollection
             const paymentsQuery = query(collection(db, 'users', uid, 'payments'));
             const paymentsUnsub = onSnapshot(paymentsQuery, (snapshot) => {
@@ -154,7 +154,7 @@ export const useStore = create<StoreState>((set, get) => ({
                 set({ payments });
             });
             unsubscribers.push(paymentsUnsub);
-            
+
             // Fetch employees from user's employees subcollection
             const employeesQuery = query(collection(db, 'users', uid, 'employees'));
             const employeesUnsub = onSnapshot(employeesQuery, (snapshot) => {
@@ -178,7 +178,7 @@ export const useStore = create<StoreState>((set, get) => ({
             toast.error('User not authenticated');
             return;
         }
-        
+
         try {
             await addDoc(collection(db, 'users', profile.uid, 'drivers'), driver);
             toast.success('Driver added');
@@ -194,7 +194,7 @@ export const useStore = create<StoreState>((set, get) => ({
             toast.error('User not authenticated');
             return;
         }
-        
+
         try {
             const { id, ...data } = driver;
             await updateDoc(doc(db, 'users', profile.uid, 'drivers', id), data);
@@ -211,7 +211,7 @@ export const useStore = create<StoreState>((set, get) => ({
             toast.error('User not authenticated');
             return;
         }
-        
+
         try {
             await deleteDoc(doc(db, 'users', profile.uid, 'drivers', driverId));
             toast.success('Driver deleted');
@@ -227,7 +227,7 @@ export const useStore = create<StoreState>((set, get) => ({
             toast.error('User not authenticated');
             return;
         }
-        
+
         try {
             await addDoc(collection(db, 'users', profile.uid, 'vehicles'), vehicle);
             toast.success('Vehicle added');
@@ -243,7 +243,7 @@ export const useStore = create<StoreState>((set, get) => ({
             toast.error('User not authenticated');
             return;
         }
-        
+
         try {
             const { id, ...data } = vehicle;
             await updateDoc(doc(db, 'users', profile.uid, 'vehicles', id), data);
@@ -260,7 +260,7 @@ export const useStore = create<StoreState>((set, get) => ({
             toast.error('User not authenticated');
             return;
         }
-        
+
         try {
             await deleteDoc(doc(db, 'users', profile.uid, 'vehicles', vehicleId));
             toast.success('Vehicle deleted');
@@ -276,7 +276,7 @@ export const useStore = create<StoreState>((set, get) => ({
             toast.error('User not authenticated');
             return;
         }
-        
+
         try {
             await addDoc(collection(db, 'users', profile.uid, 'customers'), customer);
             toast.success('Customer added');
@@ -292,7 +292,7 @@ export const useStore = create<StoreState>((set, get) => ({
             toast.error('User not authenticated');
             return;
         }
-        
+
         try {
             const { id, ...data } = customer;
             await updateDoc(doc(db, 'users', profile.uid, 'customers', id), data);
@@ -309,7 +309,7 @@ export const useStore = create<StoreState>((set, get) => ({
             toast.error('User not authenticated');
             return;
         }
-        
+
         try {
             await deleteDoc(doc(db, 'users', profile.uid, 'customers', customerId));
             toast.success('Customer deleted');
@@ -325,7 +325,7 @@ export const useStore = create<StoreState>((set, get) => ({
             toast.error('User not authenticated');
             return;
         }
-        
+
         try {
             await addDoc(collection(db, 'users', profile.uid, 'trips'), trip);
             toast.success('Trip added');
@@ -341,7 +341,7 @@ export const useStore = create<StoreState>((set, get) => ({
             toast.error('User not authenticated');
             return;
         }
-        
+
         try {
             const { id, ...data } = trip;
             await updateDoc(doc(db, 'users', profile.uid, 'trips', id), data);
@@ -358,7 +358,7 @@ export const useStore = create<StoreState>((set, get) => ({
             toast.error('User not authenticated');
             return;
         }
-        
+
         try {
             await deleteDoc(doc(db, 'users', profile.uid, 'trips', tripId));
             toast.success('Trip deleted');
@@ -367,7 +367,7 @@ export const useStore = create<StoreState>((set, get) => ({
             toast.error('Failed to delete trip');
         }
     },
-    
+
     addPayment: async (payment) => {
         const { profile } = get();
         if (!profile || !profile.uid) {
@@ -387,7 +387,7 @@ export const useStore = create<StoreState>((set, get) => ({
                 return; // Return early on error
             }
         }
-        
+
         try {
             await addDoc(collection(db, 'users', profile.uid, 'payments'), payment);
             toast.success('Payment added');
@@ -416,7 +416,7 @@ export const useStore = create<StoreState>((set, get) => ({
             }
             return;
         }
-        
+
         try {
             const { id, ...data } = payment;
             await updateDoc(doc(db, 'users', profile.uid, 'payments', id), data);
@@ -445,7 +445,7 @@ export const useStore = create<StoreState>((set, get) => ({
             }
             return;
         }
-        
+
         try {
             await deleteDoc(doc(db, 'users', profile.uid, 'payments', paymentId));
             toast.success('Payment deleted');
@@ -454,14 +454,14 @@ export const useStore = create<StoreState>((set, get) => ({
             toast.error('Failed to delete payment');
         }
     },
-    
+
     addEmployee: async (employee) => {
         const { profile } = get();
         if (!profile) {
             toast.error('User not authenticated');
             return;
         }
-        
+
         try {
             await addDoc(collection(db, 'users', profile.uid, 'employees'), employee);
             toast.success('Employee added');
@@ -477,7 +477,7 @@ export const useStore = create<StoreState>((set, get) => ({
             toast.error('User not authenticated');
             return;
         }
-        
+
         try {
             const { id, ...data } = employee;
             await updateDoc(doc(db, 'users', profile.uid, 'employees', id), data);
@@ -494,7 +494,7 @@ export const useStore = create<StoreState>((set, get) => ({
             toast.error('User not authenticated');
             return;
         }
-        
+
         try {
             await deleteDoc(doc(db, 'users', profile.uid, 'employees', employeeId));
             toast.success('Employee deleted');
@@ -503,7 +503,7 @@ export const useStore = create<StoreState>((set, get) => ({
             toast.error('Failed to delete employee');
         }
     },
-    
+
     // Add this new function implementation
     updateSettings: async (newSettings) => {
         const { profile } = get();
@@ -511,7 +511,7 @@ export const useStore = create<StoreState>((set, get) => ({
             toast.error('User not authenticated');
             return;
         }
-        
+
         try {
             const userDocRef = doc(db, 'users', profile.uid);
             await updateDoc(userDocRef, {
