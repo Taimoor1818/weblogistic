@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-export function proxy() {
+export default function middleware(request: any) {
     // In a real production app, you would verify the session cookie here
     // For this implementation, we're handling auth checks mainly on the client side
     // via the useAuth hook and AdminGuard component.
