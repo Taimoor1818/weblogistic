@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
@@ -63,7 +63,7 @@ export function MPINSetup({ open, onClose, userId, userEmail, onSuccess, require
         }
     };
 
-    const handleSubmit = async () => {
+    const handleSubmit = useCallback(async () => {
         if (pin.length !== 4) {
             setError("Please enter a 4-digit MPIN");
             return;
@@ -140,7 +140,7 @@ export function MPINSetup({ open, onClose, userId, userEmail, onSuccess, require
                 setLoading(false);
             }
         }
-    };
+    }, [pin, step, confirmPin, userId, userEmail, onSuccess, hasMPIN]);
 
     // Auto-submit when confirm PIN is complete
     useEffect(() => {
@@ -150,7 +150,7 @@ export function MPINSetup({ open, onClose, userId, userEmail, onSuccess, require
             }, 300);
             return () => clearTimeout(timer);
         }
-    }, [confirmPin, step]);
+    }, [confirmPin, step, handleSubmit]);
 
     const handleClose = () => {
         if (!loading) {

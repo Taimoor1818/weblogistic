@@ -69,18 +69,18 @@ export default function PaymentsPage() {
 
   // Calculate payment statistics
   const paymentStats = useMemo(() => {
-    const issuedPayments = payments.filter((p: any) => p.status === 'paid');
-    const receivedPayments = payments.filter((p: any) => p.status === 'received');
+    const issuedPayments = payments.filter((p: Payment) => p.status === 'paid');
+    const receivedPayments = payments.filter((p: Payment) => p.status === 'received');
 
     // Total revenue from received trip payments
     const totalRevenue = receivedPayments
-      .filter((p: any) => p.type === 'trip')
-      .reduce((sum: number, p: any) => sum + p.amount, 0);
+      .filter((p: Payment) => p.type === 'trip')
+      .reduce((sum: number, p: Payment) => sum + p.amount, 0);
 
     // Total expenses from paid non-trip payments
     const totalExpenses = issuedPayments
-      .filter((p: any) => p.type !== 'trip')
-      .reduce((sum: number, p: any) => sum + p.amount, 0);
+      .filter((p: Payment) => p.type !== 'trip')
+      .reduce((sum: number, p: Payment) => sum + p.amount, 0);
 
     // Net profit
     const netProfit = totalRevenue - totalExpenses;
@@ -261,7 +261,7 @@ export default function PaymentsPage() {
 
     // Group by type
     const byType: Record<string, { count: number; amount: number }> = {};
-    expensePayments.forEach((p: any) => {
+    expensePayments.forEach((p: Payment) => {
       if (!byType[p.type]) {
         byType[p.type] = { count: 0, amount: 0 };
       }

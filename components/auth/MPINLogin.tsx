@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { auth, db } from "@/lib/firebase";
@@ -33,28 +33,9 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
     };
 
     // Auto-submit with debounce when PIN is entered
-    useEffect(() => {
-        if (pin.length === 4) {
-            // Clear any existing timeout
-            if (debounceTimeout.current) {
-                clearTimeout(debounceTimeout.current);
-            }
 
-            // Set new timeout for 300ms
-            debounceTimeout.current = setTimeout(() => {
-                handlePinComplete();
-            }, 300);
-        }
 
-        // Cleanup timeout on unmount
-        return () => {
-            if (debounceTimeout.current) {
-                clearTimeout(debounceTimeout.current);
-            }
-        };
-    }, [pin]);
-
-    const handlePinComplete = async () => {
+    const handlePinComplete = useCallback(async () => {
         setLoading(true);
         setError(false);
 
@@ -164,7 +145,29 @@ export function MPINLogin({ open, onClose, onSwitchToGoogle }: MPINLoginProps) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [pin, onClose, router, onSwitchToGoogle]);
+
+    // Auto-submit with debounce when PIN is entered
+    useEffect(() => {
+        if (pin.length === 4) {
+            // Clear any existing timeout
+            if (debounceTimeout.current) {
+                clearTimeout(debounceTimeout.current);
+            }
+
+            // Set new timeout for 300ms
+            debounceTimeout.current = setTimeout(() => {
+                handlePinComplete();
+            }, 300);
+        }
+
+        // Cleanup timeout on unmount
+        return () => {
+            if (debounceTimeout.current) {
+                clearTimeout(debounceTimeout.current);
+            }
+        };
+    }, [pin, handlePinComplete]);
 
     const handleClose = () => {
         if (!loading) {

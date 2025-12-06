@@ -24,7 +24,7 @@ export default function AdminDashboard() {
         try {
             setLoading(true);
             setError(null);
-            
+
             // Fetch users stats
             const usersSnapshot = await getDocs(collection(db, "users"));
             const totalUsers = usersSnapshot.size;
@@ -65,10 +65,11 @@ export default function AdminDashboard() {
                     id: doc.id,
                     ...doc.data()
                 })) as PaymentRequest[]);
-            } catch (queryError: any) {
+            } catch (queryError: unknown) {
                 console.error("Error fetching recent requests:", queryError);
                 // Handle the index error specifically
-                if (queryError.code === "failed-precondition" && queryError.message.includes("query requires an index")) {
+                const err = queryError as { code?: string; message: string };
+                if (err.code === "failed-precondition" && err.message.includes("query requires an index")) {
                     setError("The application requires a Firestore index to display recent requests. Please contact the administrator.");
                     toast.error("Missing database index. Some features may be limited.");
                 } else {
@@ -79,7 +80,7 @@ export default function AdminDashboard() {
                 setRecentRequests([]);
             }
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Error fetching admin stats:", error);
             setError("Failed to load dashboard statistics.");
             toast.error("Failed to load dashboard statistics.");
@@ -90,15 +91,15 @@ export default function AdminDashboard() {
 
     useEffect(() => {
         let isMounted = true;
-        
+
         const loadData = async () => {
             if (isMounted) {
                 await fetchStats();
             }
         };
-        
+
         loadData();
-        
+
         return () => {
             isMounted = false;
         };
